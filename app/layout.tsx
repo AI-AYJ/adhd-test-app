@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     siteName: "ADHD Test",
     images: [
       {
-        url: "public/logo.png", // 👉 이렇게 써도 됨 (metadataBase 덕분)
+        url: "/logo.png", // 👉 이렇게 써도 됨 (metadataBase 덕분)
         width: 1200,
         height: 630,
       },
