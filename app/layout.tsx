@@ -17,11 +17,10 @@ export const metadata: Metadata = {
 
   title: "ADHD 테스트 해보기",
   description: "간단하게 ADHD 여부를 테스트해보세요.",
-  
+
   openGraph: {
     title: "ADHD 테스트 해보기",
     description: "간단하게 ADHD 여부를 테스트해보세요.",
-    url: "https://adhd-test-app-9ovm.vercel.app",
     siteName: "ADHD Test",
     images: [
       {
