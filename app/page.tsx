@@ -611,60 +611,80 @@ export default function Home() {
         </div>
     </main>
 
-    <section id="environmentCheckOverlay" className="hidden fixed inset-0 z-[80] overflow-y-auto bg-slate-950/70 px-4 py-6 backdrop-blur-md" aria-hidden="true">
-      <div className="mx-auto flex min-h-full w-full max-w-6xl items-center justify-center">
+    <section id="environmentCheckOverlay" className="hidden fixed inset-0 z-[80] overflow-y-auto bg-slate-950/70 px-4 py-3 backdrop-blur-md" aria-hidden="true">
+      <div className="mx-auto flex h-full w-full max-w-4xl items-center justify-center">
         <div className="w-full overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-[0_40px_140px_rgba(15,23,42,0.36)]">
           <div className="grid gap-0 lg:grid-cols-[0.88fr_1.12fr]">
-            <div className="border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.12),_transparent_40%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-7 md:p-10 lg:border-b-0 lg:border-r">
+            <div className="border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.12),_transparent_40%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-4 md:p-6 lg:border-b-0 lg:border-r">
               <div className="inline-flex items-center gap-3 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.28em] text-blue-700">
                 <span>FAST</span>
                 <span className="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
                 <span>환경 점검</span>
               </div>
 
-              <h2 className="mt-6 text-4xl font-black tracking-[-0.05em] text-slate-950 md:text-5xl">
+              <h2 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950 md:text-4xl">
                 <span className="block">검사 전에</span>
-                <span className="mt-2 block">조명과 위치를</span>
-                <span className="mt-2 block">먼저 확인합니다</span>
+                <span className="mt-1 block">조명과 위치를</span>
+                <span className="mt-1 block">먼저 확인합니다</span>
               </h2>
 
-              <p id="environmentSummary" className="mt-6 max-w-xl text-base font-semibold leading-8 text-slate-600 md:text-lg">
+              <p id="environmentSummary" className="mt-3 max-w-xl text-base font-semibold leading-8 text-slate-600 md:text-lg">
                 아래의 안내사항을 맞춰주시길 권장합니다.
               </p>
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                <div id="environmentLightCard" className="rounded-[1.75rem] border border-emerald-200 bg-emerald-50 p-5">
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div id="environmentLightCard" className="rounded-[1.75rem] border border-emerald-200 bg-emerald-50 p-4">
                   <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Lighting</p>
-                  <p id="environmentLightStatus" className="mt-3 whitespace-pre-line text-2xl font-black tracking-tight text-emerald-600">
+                  <p id="environmentLightStatus" className="mt-2 whitespace-pre-line text-lg font-black tracking-tight text-emerald-600">
                     불을 켜고{"\n"}진행해주세요
                   </p>
-                  <p id="environmentLightHint" className="mt-2 whitespace-pre-line text-sm font-medium leading-6 text-slate-500">
+                  <p id="environmentLightHint" className="mt-2 whitespace-pre-line text-xs font-medium leading-5 text-slate-500">
                     실내 조명을 켠 상태에서{"\n"}진행하는 것을 권장합니다.
                   </p>
                 </div>
 
-                <div id="environmentPositionCard" className="rounded-[1.75rem] border border-emerald-200 bg-emerald-50 p-5">
+                <div id="environmentPositionCard" className="rounded-[1.75rem] border border-emerald-200 bg-emerald-50 p-4">
                   <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Position</p>
-                  <p id="environmentPositionStatus" className="mt-3 whitespace-pre-line text-2xl font-black tracking-tight text-emerald-600">
+                  <p id="environmentPositionStatus" className="mt-2 whitespace-pre-line text-lg font-black tracking-tight text-emerald-600">
                     얼굴이 중앙으로{"\n"}오게 해주세요
                   </p>
-                  <p id="environmentPositionHint" className="mt-2 whitespace-pre-line text-sm font-medium leading-6 text-slate-500">
-                    얼굴 전체가 화면 중앙{"\n"}네모에 들어오게 해주세요.{"\n"}볼륨은 70% 이상으로 맞춰주세요.
+                  <p id="environmentPositionHint" className="mt-2 whitespace-pre-line text-xs font-medium leading-5 text-slate-500">
+                    얼굴 전체가 화면 중앙{"\n"}네모에 들어오게 해주세요.
+                  </p>
+                </div>
+
+                <div id="environmentPrivacyCard" className="rounded-[1.75rem] border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Privacy</p>
+                  <p id="environmentPrivacyStatus" className="mt-2 whitespace-pre-line text-lg font-black tracking-tight text-emerald-600">
+                    검사하는 본인만{"\n"}화면에 나오게 해주세요
+                  </p>
+                  <p id="environmentPrivacyHint" className="mt-2 whitespace-pre-line text-xs font-medium leading-5 text-slate-500">
+                    배경이나 다른 사람이{"\n"}보이지 않도록 해주세요.
+                  </p>
+                </div>
+
+                <div id="environmentVolumeCard" className="rounded-[1.75rem] border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Volume</p>
+                  <p id="environmentVolumeStatus" className="mt-2 whitespace-pre-line text-lg font-black tracking-tight text-emerald-600">
+                    볼륨을 70% 이상{"\n"}맞춰주세요
+                  </p>
+                  <p id="environmentVolumeHint" className="mt-2 whitespace-pre-line text-xs font-medium leading-5 text-slate-500">
+                    진행 중 음성 안내를 쉽게{"\n"}들을 수 있도록 해주세요.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <button type="button" id="environmentContinueBtn" className="rounded-full bg-slate-950 px-7 py-4 text-sm font-black uppercase tracking-[0.24em] text-white transition disabled:cursor-not-allowed disabled:opacity-25">
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <button type="button" id="environmentContinueBtn" className="rounded-full bg-slate-950 px-7 py-3 text-sm font-black uppercase tracking-[0.24em] text-white transition disabled:cursor-not-allowed disabled:opacity-25">
                   계속 진행
                 </button>
-                <button type="button" id="environmentCloseBtn" className="rounded-full border border-slate-300 bg-white px-7 py-4 text-sm font-black uppercase tracking-[0.24em] text-slate-700 transition hover:border-slate-900 hover:text-slate-900">
+                <button type="button" id="environmentCloseBtn" className="rounded-full border border-slate-300 bg-white px-7 py-3 text-sm font-black uppercase tracking-[0.24em] text-slate-700 transition hover:border-slate-900 hover:text-slate-900">
                   닫기
                 </button>
               </div>
             </div>
 
-            <div className="bg-slate-950 p-4 md:p-6">
+            <div className="bg-slate-950 p-3 md:p-4 flex items-center justify-center">
               <div className="environment-check-shell relative mx-auto w-full max-w-[46rem] overflow-hidden rounded-[2rem] border border-emerald-400/40 bg-slate-900 shadow-[0_24px_80px_rgba(15,23,42,0.36)]">
                 <video id="environmentWebcamPreview" autoPlay playsInline muted />
                 <canvas id="environmentGuideOverlay"></canvas>
@@ -674,10 +694,10 @@ export default function Home() {
                     Camera preview
                   </div>
                 </div>
-                <div className="pointer-events-none absolute inset-x-5 bottom-5 rounded-[1.25rem] border border-white/12 bg-slate-950/72 px-4 py-3 text-center backdrop-blur">
+                <div className="pointer-events-none absolute inset-x-5 bottom-5 rounded-[1.25rem] border border-white/12 bg-slate-950/72 px-4 py-2 text-center backdrop-blur">
                   <p className="text-[11px] font-black uppercase tracking-[0.28em] text-emerald-300">Center Guide</p>
-                  <p className="mt-2 text-sm font-semibold leading-6 text-white md:text-base">
-                    카메라 화면을 보고 얼굴 전체가 중앙 네모에 들어오게 해주세요. 볼륨은 70% 이상으로 맞춰주세요.
+                  <p className="mt-1 text-xs font-semibold leading-5 text-white md:text-sm">
+                    카메라 화면을 보고 얼굴 전체가 중앙 네모에 들어오게 해주세요.
                   </p>
                 </div>
               </div>
