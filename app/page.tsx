@@ -19,11 +19,14 @@ type SurveyControls = {
 
 function FASTLogoMark() {
   return (
-    <img
-      src="/logo.png"
-      alt="FAST Logo"
-      className="h-12 w-12 rounded-2xl border border-blue-200 bg-[linear-gradient(135deg,#eff6ff_0%,#dbeafe_100%)] shadow-[0_10px_24px_rgba(59,130,246,0.16)] object-contain"
-    />
+    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-200 bg-[linear-gradient(135deg,#eff6ff_0%,#dbeafe_100%)] shadow-[0_10px_24px_rgba(59,130,246,0.16)]">
+      <div className="relative h-6 w-6">
+        <span className="absolute left-0 top-0 h-3 w-3 rounded-sm bg-slate-950"></span>
+        <span className="absolute right-0 top-0 h-3 w-3 rounded-sm bg-blue-500"></span>
+        <span className="absolute left-0 bottom-0 h-3 w-3 rounded-sm bg-cyan-400"></span>
+        <span className="absolute right-0 bottom-0 h-3 w-3 rounded-sm bg-slate-200"></span>
+      </div>
+    </div>
   );
 }
 
