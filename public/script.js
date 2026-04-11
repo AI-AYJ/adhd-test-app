@@ -1113,7 +1113,7 @@ function drawBlendShapes(el, blendShapes) {
                 dom.environmentPositionStatus.textContent = "얼굴이 중앙으로\n오게 해주세요";
             }
             if (dom.environmentPositionHint) {
-                dom.environmentPositionHint.textContent = "얼굴 전체가 화면 중앙\n네모에 들어오게 해주세요.\n볼륨은 70% 이상으로 맞춰주세요.";
+                dom.environmentPositionHint.textContent = "얼굴 전체가 화면 중앙\n네모에 들어오게 해주세요.";
             }
             if (dom.environmentContinueBtn) {
                 dom.environmentContinueBtn.disabled = false;
