@@ -3615,14 +3615,14 @@ function drawBlendShapes(el, blendShapes) {
 
         metricBucket = function metricBucket(score, { reverse = false } = {}) {
             if (reverse) {
-                if (score >= 55) return { tone: "높음", color: "text-rose-600" };
-                if (score >= 25) return { tone: "중간", color: "text-amber-500" };
-                return { tone: "낮음", color: "text-emerald-600" };
+                if (score >= 55) return { tone: "?믪쓬", color: "text-rose-600" };
+                if (score >= 25) return { tone: "以묎컙", color: "text-amber-500" };
+                return { tone: "??쓬", color: "text-emerald-600" };
             }
 
-            if (score >= 75) return { tone: "안정", color: "text-emerald-600" };
-            if (score >= 45) return { tone: "보통", color: "text-amber-500" };
-            return { tone: "주의 필요", color: "text-rose-600" };
+            if (score >= 75) return { tone: "?덉젙", color: "text-emerald-600" };
+            if (score >= 45) return { tone: "蹂댄넻", color: "text-amber-500" };
+            return { tone: "二쇱쓽 ?꾩슂", color: "text-rose-600" };
         };
 
         handleWebGazerPrediction = function handleWebGazerPrediction(data, elapsedTime) {
