@@ -1,0 +1,10 @@
+{
+  "inattention_count": 8,
+  "hyperactivity_count": 5,
+  "cpt_attention": 58,
+  "cpt_timeliness": 63,
+  "cpt_impulsivity": 42,
+  "cpt_hyperactivity": 31,
+  "gaze_off_task_ratio": 47,
+  "head_movement_variability": 0.82
+}

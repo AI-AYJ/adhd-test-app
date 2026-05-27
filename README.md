@@ -20,6 +20,15 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Jaeminai Integration
+
+This app now includes server-side API routes for Jaeminai embedding and LLM calls.
+
+- `POST /api/jaeminai/embeddings` — Jaeminai embedding 생성 및 선택적 Supabase 저장
+- `POST /api/jaeminai/llm` — Jaeminai LLM 호출
+
+Create a `.env.local` file with your Jaeminai key and endpoints. See `.env.local.example` for the expected variables.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
