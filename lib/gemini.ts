@@ -55,18 +55,52 @@ function getGEMINIHeaders() {
   };
 }
 
+function shouldRetryGeminiRequest(status: number) {
+  return status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchGeminiWithRetry(url: string, init: RequestInit) {
+  const maxAttempts = 3;
+  let lastResponse: Response | null = null;
+  let lastData: any = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const response = await fetch(url, init);
+    const data = await response.json().catch(() => null);
+
+    if (response.ok || !shouldRetryGeminiRequest(response.status) || attempt === maxAttempts) {
+      return { response, data };
+    }
+
+    lastResponse = response;
+    lastData = data;
+    await wait(800 * attempt);
+  }
+
+  return {
+    response: lastResponse,
+    data: lastData,
+  };
+}
+
 export async function requestGEMINIEmbedding(
   input: string,
   model = process.env.GEMINI_EMBEDDING_MODEL || DEFAULT_GEMINI_EMBEDDING_MODEL
 ) {
   const requestUrl = buildGoogleGeminiUrl(model, DEFAULT_GEMINI_EMBEDDING_MODEL, 'embedContent');
-  const res = await fetch(requestUrl, {
+  const { response: res, data } = await fetchGeminiWithRetry(requestUrl, {
     method: 'POST',
     headers: getGEMINIHeaders(),
     body: JSON.stringify({ content: { parts: [{ text: input }] } }),
   });
 
-  const data = await res.json();
+  if (!res) {
+    throw new Error('GEMINI embedding request failed before receiving a response');
+  }
 
   if (!res.ok) {
     throw new Error(
@@ -104,7 +138,7 @@ export async function requestGEMINILLM(options: {
   } = options;
 
   const requestUrl = buildGoogleGeminiUrl(model, DEFAULT_GEMINI_LLM_MODEL, 'generateContent');
-  const res = await fetch(requestUrl, {
+  const { response: res, data } = await fetchGeminiWithRetry(requestUrl, {
     method: 'POST',
     headers: getGEMINIHeaders(),
     body: JSON.stringify({
@@ -119,7 +153,9 @@ export async function requestGEMINILLM(options: {
     }),
   });
 
-  const data = await res.json();
+  if (!res) {
+    throw new Error('GEMINI LLM request failed before receiving a response');
+  }
 
   if (!res.ok) {
     throw new Error(
