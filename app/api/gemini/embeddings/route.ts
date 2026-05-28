@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requestJaeminaiEmbedding } from '@/lib/gemini';
+import { requestGEMINIEmbedding } from '@/lib/gemini';
 
 export async function POST(req: Request) {
   const body = await req.json();
   const input = body.input || body.text;
-  const model = body.model || 'jaeminai-embedding';
+  const model = body.model || 'gemini-embedding-001';
 
   if (!input || typeof input !== 'string') {
     return NextResponse.json({ success: false, error: 'Missing input text' }, { status: 400 });
   }
 
   try {
-    const embedding = await requestJaeminaiEmbedding(input, model);
+    const embedding = await requestGEMINIEmbedding(input, model);
 
     if (body.store === true || body.content) {
       const { data, error } = await supabase.from('documents').insert({

@@ -111,11 +111,11 @@ function ensureHtmlParagraphs(text: string) {
 }
 
 async function generateReportWithLLM(metrics: NormalizedReportMetrics) {
-  const apiKey = process.env.JAEMINAI_API_KEY;
-  const llmUrl = process.env.JAEMINAI_LLM_URL;
+  const apiKey = process.env.GEMINI_API_KEY;
+  const llmUrl = process.env.GEMINI_LLM_URL;
 
   if (!apiKey || !llmUrl) {
-    throw new Error("JAEMINAI_API_KEY 또는 JAEMINAI_LLM_URL 환경변수가 없습니다.");
+    throw new Error("GEMINI_API_KEY 또는 GEMINI_LLM_URL 환경변수가 없습니다.");
   }
 
   const prompt = buildPrompt(metrics);
@@ -142,7 +142,7 @@ async function generateReportWithLLM(metrics: NormalizedReportMetrics) {
             },
           }
         : {
-            model: process.env.JAEMINAI_LLM_MODEL ?? "jaeminai-llm",
+            model: process.env.GEMINI_LLM_MODEL ?? "gemini-2.5-flash",
             prompt,
             temperature: 0.45,
             max_tokens: 4200,

@@ -20,14 +20,14 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Jaeminai Integration
+## Gemini Integration
 
-This app now includes server-side API routes for Jaeminai embedding and LLM calls.
+This app includes server-side API routes for Gemini embedding and LLM calls.
 
-- `POST /api/jaeminai/embeddings` — Jaeminai embedding 생성 및 선택적 Supabase 저장
-- `POST /api/jaeminai/llm` — Jaeminai LLM 호출
+- `POST /api/gemini/embeddings` - Gemini embedding generation and optional Supabase storage
+- `POST /api/gemini/llm` - Gemini LLM call
 
-Create a `.env.local` file with your Jaeminai key and endpoints. See `.env.local.example` for the expected variables.
+Create a `.env.local` file with your Gemini key and endpoints.
 
 ## Learn More
 

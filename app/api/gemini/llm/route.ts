@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { requestJaeminaiLLM } from '@/lib/gemini';
+import { requestGEMINILLM } from '@/lib/gemini';
 
 export async function POST(req: Request) {
   const body = await req.json();
   const prompt = body.prompt || body.question || body.input;
-  const model = body.model || 'jaeminai-llm';
+  const model = body.model || 'gemini-2.5-flash';
   const temperature = typeof body.temperature === 'number' ? body.temperature : 0.7;
   const maxTokens = typeof body.max_tokens === 'number' ? body.max_tokens : 1024;
   const stop = Array.isArray(body.stop) ? body.stop : undefined;
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = await requestJaeminaiLLM({
+    const result = await requestGEMINILLM({
       prompt,
       model,
       temperature,

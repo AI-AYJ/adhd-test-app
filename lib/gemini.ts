@@ -8,16 +8,24 @@ function getGEMINIApiKey() {
   return apiKey;
 }
 
-function getGEMINIHeaders() {
+function isGoogleGeminiUrl(url: string) {
+  return url.includes('generativelanguage.googleapis.com');
+}
+
+function withGeminiApiKey(url: string) {
+  return `${url}${url.includes('?') ? '&' : '?'}key=${getGEMINIApiKey()}`;
+}
+
+function getGEMINIHeaders(url: string) {
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${getGEMINIApiKey()}`,
+    ...(isGoogleGeminiUrl(url) ? {} : { Authorization: `Bearer ${getGEMINIApiKey()}` }),
   };
 }
 
 export async function requestGEMINIEmbedding(
   input: string,
-  model = 'geminai-embedding'
+  model = 'gemini-embedding-001'
 ) {
   const embeddingUrl = process.env.GEMINI_EMBEDDING_URL;
 
@@ -27,13 +35,18 @@ export async function requestGEMINIEmbedding(
     );
   }
 
-  const res = await fetch(embeddingUrl, {
+  const isGeminiUrl = isGoogleGeminiUrl(embeddingUrl);
+  const res = await fetch(isGeminiUrl ? withGeminiApiKey(embeddingUrl) : embeddingUrl, {
     method: 'POST',
-    headers: getGEMINIHeaders(),
-    body: JSON.stringify({
-      model,
-      input,
-    }),
+    headers: getGEMINIHeaders(embeddingUrl),
+    body: JSON.stringify(
+      isGeminiUrl
+        ? { content: { parts: [{ text: input }] } }
+        : {
+            model,
+            input,
+          }
+    ),
   });
 
   const data = await res.json();
@@ -44,7 +57,7 @@ export async function requestGEMINIEmbedding(
     );
   }
 
-  const embedding = data?.data?.[0]?.embedding;
+  const embedding = data?.embedding?.values ?? data?.data?.[0]?.embedding;
 
   if (!Array.isArray(embedding)) {
     throw new Error(
@@ -73,24 +86,36 @@ export async function requestGEMINILLM(options: {
 
   const {
     prompt,
-    model = 'geminai-llm',
+    model = 'gemini-2.5-flash',
     temperature = 0.7,
     max_tokens = 1024,
     stop,
     ...rest
   } = options;
 
-  const res = await fetch(llmUrl, {
+  const isGeminiUrl = isGoogleGeminiUrl(llmUrl);
+  const res = await fetch(isGeminiUrl ? withGeminiApiKey(llmUrl) : llmUrl, {
     method: 'POST',
-    headers: getGEMINIHeaders(),
-    body: JSON.stringify({
-      model,
-      prompt,
-      temperature,
-      max_tokens,
-      stop,
-      ...rest,
-    }),
+    headers: getGEMINIHeaders(llmUrl),
+    body: JSON.stringify(
+      isGeminiUrl
+        ? {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature,
+              maxOutputTokens: max_tokens,
+            },
+            ...rest,
+          }
+        : {
+            model,
+            prompt,
+            temperature,
+            max_tokens,
+            stop,
+            ...rest,
+          }
+    ),
   });
 
   const data = await res.json();
