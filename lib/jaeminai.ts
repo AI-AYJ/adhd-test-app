@@ -1,24 +1,33 @@
-export const JAEMINAI_API_KEY = process.env.JAEMINAI_API_KEY;
-export const JAEMINAI_EMBEDDING_URL = process.env.JAEMINAI_EMBEDDING_URL;
-export const JAEMINAI_LLM_URL = process.env.JAEMINAI_LLM_URL;
+function getJaeminaiApiKey() {
+  const apiKey = process.env.JAEMINAI_API_KEY;
 
-if (!JAEMINAI_API_KEY) {
-  throw new Error('Missing environment variable JAEMINAI_API_KEY');
+  if (!apiKey) {
+    throw new Error('Missing environment variable JAEMINAI_API_KEY');
+  }
+
+  return apiKey;
 }
 
 function getJaeminaiHeaders() {
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${JAEMINAI_API_KEY}`,
+    Authorization: `Bearer ${getJaeminaiApiKey()}`,
   };
 }
 
-export async function requestJaeminaiEmbedding(input: string, model = 'jaeminai-embedding') {
-  if (!JAEMINAI_EMBEDDING_URL) {
-    throw new Error('Missing environment variable JAEMINAI_EMBEDDING_URL');
+export async function requestJaeminaiEmbedding(
+  input: string,
+  model = 'jaeminai-embedding'
+) {
+  const embeddingUrl = process.env.JAEMINAI_EMBEDDING_URL;
+
+  if (!embeddingUrl) {
+    throw new Error(
+      'Missing environment variable JAEMINAI_EMBEDDING_URL'
+    );
   }
 
-  const res = await fetch(JAEMINAI_EMBEDDING_URL, {
+  const res = await fetch(embeddingUrl, {
     method: 'POST',
     headers: getJaeminaiHeaders(),
     body: JSON.stringify({
@@ -28,13 +37,19 @@ export async function requestJaeminaiEmbedding(input: string, model = 'jaeminai-
   });
 
   const data = await res.json();
+
   if (!res.ok) {
-    throw new Error(`Jaeminai embedding request failed: ${JSON.stringify(data)}`);
+    throw new Error(
+      `Jaeminai embedding request failed: ${JSON.stringify(data)}`
+    );
   }
 
   const embedding = data?.data?.[0]?.embedding;
+
   if (!Array.isArray(embedding)) {
-    throw new Error(`Invalid embedding response: ${JSON.stringify(data)}`);
+    throw new Error(
+      `Invalid embedding response: ${JSON.stringify(data)}`
+    );
   }
 
   return embedding as number[];
@@ -48,13 +63,24 @@ export async function requestJaeminaiLLM(options: {
   stop?: string[];
   [key: string]: any;
 }) {
-  if (!JAEMINAI_LLM_URL) {
-    throw new Error('Missing environment variable JAEMINAI_LLM_URL');
+  const llmUrl = process.env.JAEMINAI_LLM_URL;
+
+  if (!llmUrl) {
+    throw new Error(
+      'Missing environment variable JAEMINAI_LLM_URL'
+    );
   }
 
-  const { prompt, model = 'jaeminai-llm', temperature = 0.7, max_tokens = 1024, stop, ...rest } = options;
+  const {
+    prompt,
+    model = 'jaeminai-llm',
+    temperature = 0.7,
+    max_tokens = 1024,
+    stop,
+    ...rest
+  } = options;
 
-  const res = await fetch(JAEMINAI_LLM_URL, {
+  const res = await fetch(llmUrl, {
     method: 'POST',
     headers: getJaeminaiHeaders(),
     body: JSON.stringify({
@@ -68,8 +94,11 @@ export async function requestJaeminaiLLM(options: {
   });
 
   const data = await res.json();
+
   if (!res.ok) {
-    throw new Error(`Jaeminai LLM request failed: ${JSON.stringify(data)}`);
+    throw new Error(
+      `Jaeminai LLM request failed: ${JSON.stringify(data)}`
+    );
   }
 
   return data;
