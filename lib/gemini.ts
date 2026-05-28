@@ -1,8 +1,8 @@
 function getJaeminaiApiKey() {
-  const apiKey = process.env.JAEMINAI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    throw new Error('Missing environment variable JAEMINAI_API_KEY');
+    throw new Error('Missing environment variable GEMINI_API_KEY');
   }
 
   return apiKey;
@@ -17,13 +17,13 @@ function getJaeminaiHeaders() {
 
 export async function requestJaeminaiEmbedding(
   input: string,
-  model = 'jaeminai-embedding'
+  model = 'geminai-embedding'
 ) {
-  const embeddingUrl = process.env.JAEMINAI_EMBEDDING_URL;
+  const embeddingUrl = process.env.GEMINI_EMBEDDING_URL;
 
   if (!embeddingUrl) {
     throw new Error(
-      'Missing environment variable JAEMINAI_EMBEDDING_URL'
+      'Missing environment variable GEMINI_EMBEDDING_URL'
     );
   }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requestJaeminaiLLM } from '@/lib/jaeminai';
+import { requestJaeminaiLLM } from '@/lib/gemini';
 
 export async function POST(req: Request) {
   const body = await req.json();
