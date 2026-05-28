@@ -5243,7 +5243,8 @@ function drawBlendShapes(el, blendShapes) {
                 });
                 const data = await response.json();
                 if (!response.ok || !data.success) {
-                    throw new Error(data.error || '리포트 생성 실패');
+                    const stage = data.stage ? `[${data.stage}] ` : '';
+                    throw new Error(stage + (data.error || '리포트 생성 실패'));
                 }
 
                 const reportId = data.data?.id || data.id;

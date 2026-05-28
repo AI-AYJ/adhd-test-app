@@ -126,11 +126,17 @@ async function generateReportWithLLM(metrics: NormalizedReportMetrics) {
 }
 
 export async function POST(req: Request) {
+  let stage = "parse-request";
+
   try {
     const body = await req.json();
+    stage = "normalize-metrics";
     const metrics = normalizeMetrics(body);
+
+    stage = "generate-report";
     const report = await generateReportWithLLM(metrics);
 
+    stage = "save-report";
     const { data, error } = await supabase
       .from("user_results")
       .insert({
@@ -144,16 +150,16 @@ export async function POST(req: Request) {
     if (error) {
       console.error("Supabase insert error in /api/generate-report:", error);
       return NextResponse.json(
-        { success: false, error: error.message },
+        { success: false, stage, error: error.message, details: error },
         { status: 500 },
       );
     }
 
     return NextResponse.json({ success: true, data, id: data?.id });
   } catch (err) {
-    console.error("Error in /api/generate-report:", err);
+    console.error(`Error in /api/generate-report at ${stage}:`, err);
     return NextResponse.json(
-      { success: false, error: err instanceof Error ? err.message : String(err) },
+      { success: false, stage, error: err instanceof Error ? err.message : String(err) },
       { status: 500 },
     );
   }

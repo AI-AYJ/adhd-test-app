@@ -1,0 +1,11 @@
+Error in /api/generate-report: Error: GEMINI LLM request failed (503) at https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=REDACTED: {"error":{"code":503,"message":"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.","status":"UNAVAILABLE"}}
+    at requestGEMINILLM (lib\gemini.ts:125:11)
+    at async generateReportWithLLM (app\api\generate-report\route.ts:116:16)
+    at async POST (app\api\generate-report\route.ts:132:20)
+  123 |
+  124 |   if (!res.ok) {
+> 125 |     throw new Error(
+      |           ^
+  126 |       `GEMINI LLM request failed (${res.status}) at ${redactGeminiUrl(requestUrl)}: ${JSO...
+  127 |     );
+  128 |   }
