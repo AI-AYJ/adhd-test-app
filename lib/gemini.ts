@@ -20,7 +20,13 @@ function normalizeGeminiModel(model: string, fallback: string) {
     const match = parsedUrl.pathname.match(/\/models\/([^/:]+)/);
     return match?.[1] || fallback;
   } catch {
-    return trimmed.replace(/^models\//, '').split(':')[0] || fallback;
+    const modelPathMatch = trimmed.match(/(?:^|\/)models\/([^/:?]+)/);
+    if (modelPathMatch?.[1]) {
+      return modelPathMatch[1];
+    }
+
+    const maybeModel = trimmed.split(/[/:?]/).filter(Boolean).at(-1);
+    return maybeModel || fallback;
   }
 }
 
@@ -35,6 +41,14 @@ function buildGoogleGeminiUrl(
   return parsedUrl.toString();
 }
 
+function redactGeminiUrl(url: string) {
+  const parsedUrl = new URL(url);
+  if (parsedUrl.searchParams.has('key')) {
+    parsedUrl.searchParams.set('key', 'REDACTED');
+  }
+  return parsedUrl.toString();
+}
+
 function getGEMINIHeaders() {
   return {
     'Content-Type': 'application/json',
@@ -45,7 +59,8 @@ export async function requestGEMINIEmbedding(
   input: string,
   model = process.env.GEMINI_EMBEDDING_MODEL || DEFAULT_GEMINI_EMBEDDING_MODEL
 ) {
-  const res = await fetch(buildGoogleGeminiUrl(model, DEFAULT_GEMINI_EMBEDDING_MODEL, 'embedContent'), {
+  const requestUrl = buildGoogleGeminiUrl(model, DEFAULT_GEMINI_EMBEDDING_MODEL, 'embedContent');
+  const res = await fetch(requestUrl, {
     method: 'POST',
     headers: getGEMINIHeaders(),
     body: JSON.stringify({ content: { parts: [{ text: input }] } }),
@@ -55,7 +70,7 @@ export async function requestGEMINIEmbedding(
 
   if (!res.ok) {
     throw new Error(
-      `GEMINI embedding request failed: ${JSON.stringify(data)}`
+      `GEMINI embedding request failed (${res.status}) at ${redactGeminiUrl(requestUrl)}: ${JSON.stringify(data)}`
     );
   }
 
@@ -88,7 +103,8 @@ export async function requestGEMINILLM(options: {
     ...rest
   } = options;
 
-  const res = await fetch(buildGoogleGeminiUrl(model, DEFAULT_GEMINI_LLM_MODEL, 'generateContent'), {
+  const requestUrl = buildGoogleGeminiUrl(model, DEFAULT_GEMINI_LLM_MODEL, 'generateContent');
+  const res = await fetch(requestUrl, {
     method: 'POST',
     headers: getGEMINIHeaders(),
     body: JSON.stringify({
@@ -107,7 +123,7 @@ export async function requestGEMINILLM(options: {
 
   if (!res.ok) {
     throw new Error(
-      `GEMINI LLM request failed: ${JSON.stringify(data)}`
+      `GEMINI LLM request failed (${res.status}) at ${redactGeminiUrl(requestUrl)}: ${JSON.stringify(data)}`
     );
   }
 

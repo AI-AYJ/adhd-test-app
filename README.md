@@ -27,7 +27,13 @@ This app includes server-side API routes for Gemini embedding and LLM calls.
 - `POST /api/gemini/embeddings` - Gemini embedding generation and optional Supabase storage
 - `POST /api/gemini/llm` - Gemini LLM call
 
-Create a `.env.local` file with your Gemini key and endpoints.
+Create a `.env.local` file with your Gemini key and model names. The app builds Gemini request URLs from the model names.
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_LLM_MODEL=gemini-2.5-flash
+GEMINI_EMBEDDING_MODEL=gemini-embedding-001
+```
 
 ## Learn More
 
