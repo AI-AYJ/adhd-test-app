@@ -1,7 +1,6 @@
-const DEFAULT_GEMINI_EMBEDDING_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent';
-const DEFAULT_GEMINI_LLM_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
+const DEFAULT_GEMINI_EMBEDDING_MODEL = 'gemini-embedding-001';
+const DEFAULT_GEMINI_LLM_MODEL = 'gemini-2.5-flash';
 
 function getGEMINIApiKey() {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
@@ -13,47 +12,43 @@ function getGEMINIApiKey() {
   return apiKey;
 }
 
-function isGoogleGeminiUrl(url: string) {
-  return url.includes('generativelanguage.googleapis.com');
+function normalizeGeminiModel(model: string, fallback: string) {
+  const trimmed = model.trim();
+
+  try {
+    const parsedUrl = new URL(trimmed);
+    const match = parsedUrl.pathname.match(/\/models\/([^/:]+)/);
+    return match?.[1] || fallback;
+  } catch {
+    return trimmed.replace(/^models\//, '').split(':')[0] || fallback;
+  }
 }
 
-function withGeminiApiKey(url: string) {
-  const parsedUrl = new URL(url);
+function buildGoogleGeminiUrl(
+  model: string,
+  fallbackModel: string,
+  action: 'embedContent' | 'generateContent'
+) {
+  const safeModel = normalizeGeminiModel(model, fallbackModel);
+  const parsedUrl = new URL(`${GEMINI_API_BASE_URL}/models/${safeModel}:${action}`);
   parsedUrl.searchParams.set('key', getGEMINIApiKey());
   return parsedUrl.toString();
 }
 
-function getGEMINIHeaders(url: string) {
+function getGEMINIHeaders() {
   return {
     'Content-Type': 'application/json',
-    ...(isGoogleGeminiUrl(url) ? {} : { Authorization: `Bearer ${getGEMINIApiKey()}` }),
   };
 }
 
 export async function requestGEMINIEmbedding(
   input: string,
-  model = 'gemini-embedding-001'
+  model = process.env.GEMINI_EMBEDDING_MODEL || DEFAULT_GEMINI_EMBEDDING_MODEL
 ) {
-  const embeddingUrl = (process.env.GEMINI_EMBEDDING_URL || DEFAULT_GEMINI_EMBEDDING_URL).trim();
-
-  if (!embeddingUrl) {
-    throw new Error(
-      'Missing environment variable GEMINI_EMBEDDING_URL'
-    );
-  }
-
-  const isGeminiUrl = isGoogleGeminiUrl(embeddingUrl);
-  const res = await fetch(isGeminiUrl ? withGeminiApiKey(embeddingUrl) : embeddingUrl, {
+  const res = await fetch(buildGoogleGeminiUrl(model, DEFAULT_GEMINI_EMBEDDING_MODEL, 'embedContent'), {
     method: 'POST',
-    headers: getGEMINIHeaders(embeddingUrl),
-    body: JSON.stringify(
-      isGeminiUrl
-        ? { content: { parts: [{ text: input }] } }
-        : {
-            model,
-            input,
-          }
-    ),
+    headers: getGEMINIHeaders(),
+    body: JSON.stringify({ content: { parts: [{ text: input }] } }),
   });
 
   const data = await res.json();
@@ -83,50 +78,29 @@ export async function requestGEMINILLM(options: {
   stop?: string[];
   [key: string]: any;
 }) {
-  const llmUrl = (process.env.GEMINI_LLM_URL || DEFAULT_GEMINI_LLM_URL).trim();
-
-  if (!llmUrl) {
-    throw new Error(
-      'Missing environment variable GEMINI_LLM_URL'
-    );
-  }
-
   const {
     prompt,
-    model = 'gemini-2.5-flash',
+    model = process.env.GEMINI_LLM_MODEL || DEFAULT_GEMINI_LLM_MODEL,
     temperature = 0.7,
     max_tokens = 1024,
-    stop,
     topK,
     topP,
     ...rest
   } = options;
 
-  const isGeminiUrl = isGoogleGeminiUrl(llmUrl);
-  const res = await fetch(isGeminiUrl ? withGeminiApiKey(llmUrl) : llmUrl, {
+  const res = await fetch(buildGoogleGeminiUrl(model, DEFAULT_GEMINI_LLM_MODEL, 'generateContent'), {
     method: 'POST',
-    headers: getGEMINIHeaders(llmUrl),
-    body: JSON.stringify(
-      isGeminiUrl
-        ? {
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature,
-              ...(typeof topK === 'number' ? { topK } : {}),
-              ...(typeof topP === 'number' ? { topP } : {}),
-              maxOutputTokens: max_tokens,
-            },
-            ...rest,
-          }
-        : {
-            model,
-            prompt,
-            temperature,
-            max_tokens,
-            stop,
-            ...rest,
-          }
-    ),
+    headers: getGEMINIHeaders(),
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature,
+        ...(typeof topK === 'number' ? { topK } : {}),
+        ...(typeof topP === 'number' ? { topP } : {}),
+        maxOutputTokens: max_tokens,
+      },
+      ...rest,
+    }),
   });
 
   const data = await res.json();
