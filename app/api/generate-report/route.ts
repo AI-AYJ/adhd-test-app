@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseUrl } from "@/lib/supabase";
 import { requestGEMINILLM } from "@/lib/gemini";
 
 type ReportMetrics = {
@@ -150,7 +150,7 @@ export async function POST(req: Request) {
     if (error) {
       console.error("Supabase insert error in /api/generate-report:", error);
       return NextResponse.json(
-        { success: false, stage, error: error.message, details: error },
+        { success: false, stage, error: error.message, details: error, supabaseUrl },
         { status: 500 },
       );
     }

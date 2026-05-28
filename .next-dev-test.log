@@ -11,3 +11,4 @@
 ○ Compiling /api/generate-report ...
  POST /api/generate-report 500 in 17.1s (next.js: 8.1s, application-code: 9.0s)
  POST /api/generate-report 200 in 24.5s (next.js: 7ms, application-code: 24.5s)
+ POST /api/generate-report 200 in 19.6s (next.js: 208ms, application-code: 19.4s)
