@@ -1,4 +1,4 @@
-function getJaeminaiApiKey() {
+function getGEMINIApiKey() {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -8,14 +8,14 @@ function getJaeminaiApiKey() {
   return apiKey;
 }
 
-function getJaeminaiHeaders() {
+function getGEMINIHeaders() {
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${getJaeminaiApiKey()}`,
+    Authorization: `Bearer ${getGEMINIApiKey()}`,
   };
 }
 
-export async function requestJaeminaiEmbedding(
+export async function requestGEMINIEmbedding(
   input: string,
   model = 'geminai-embedding'
 ) {
@@ -29,7 +29,7 @@ export async function requestJaeminaiEmbedding(
 
   const res = await fetch(embeddingUrl, {
     method: 'POST',
-    headers: getJaeminaiHeaders(),
+    headers: getGEMINIHeaders(),
     body: JSON.stringify({
       model,
       input,
@@ -40,7 +40,7 @@ export async function requestJaeminaiEmbedding(
 
   if (!res.ok) {
     throw new Error(
-      `Jaeminai embedding request failed: ${JSON.stringify(data)}`
+      `GEMINI embedding request failed: ${JSON.stringify(data)}`
     );
   }
 
@@ -55,7 +55,7 @@ export async function requestJaeminaiEmbedding(
   return embedding as number[];
 }
 
-export async function requestJaeminaiLLM(options: {
+export async function requestGEMINILLM(options: {
   prompt: string;
   model?: string;
   temperature?: number;
@@ -63,17 +63,17 @@ export async function requestJaeminaiLLM(options: {
   stop?: string[];
   [key: string]: any;
 }) {
-  const llmUrl = process.env.JAEMINAI_LLM_URL;
+  const llmUrl = process.env.GEMINI_LLM_URL;
 
   if (!llmUrl) {
     throw new Error(
-      'Missing environment variable JAEMINAI_LLM_URL'
+      'Missing environment variable GEMINI_LLM_URL'
     );
   }
 
   const {
     prompt,
-    model = 'jaeminai-llm',
+    model = 'geminai-llm',
     temperature = 0.7,
     max_tokens = 1024,
     stop,
@@ -82,7 +82,7 @@ export async function requestJaeminaiLLM(options: {
 
   const res = await fetch(llmUrl, {
     method: 'POST',
-    headers: getJaeminaiHeaders(),
+    headers: getGEMINIHeaders(),
     body: JSON.stringify({
       model,
       prompt,
@@ -97,7 +97,7 @@ export async function requestJaeminaiLLM(options: {
 
   if (!res.ok) {
     throw new Error(
-      `Jaeminai LLM request failed: ${JSON.stringify(data)}`
+      `GEMINI LLM request failed: ${JSON.stringify(data)}`
     );
   }
 
