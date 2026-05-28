@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { requestGEMINILLM } from "@/lib/gemini";
 
 type ReportMetrics = {
   inattention_count?: number;
@@ -111,49 +112,15 @@ function ensureHtmlParagraphs(text: string) {
 }
 
 async function generateReportWithLLM(metrics: NormalizedReportMetrics) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const llmUrl = process.env.GEMINI_LLM_URL;
-
-  if (!apiKey || !llmUrl) {
-    throw new Error("GEMINI_API_KEY 또는 GEMINI_LLM_URL 환경변수가 없습니다.");
-  }
-
   const prompt = buildPrompt(metrics);
-  const isGeminiUrl = llmUrl.includes("generativelanguage.googleapis.com");
-  const url = isGeminiUrl
-    ? `${llmUrl}${llmUrl.includes("?") ? "&" : "?"}key=${apiKey}`
-    : llmUrl;
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(isGeminiUrl ? {} : { Authorization: `Bearer ${apiKey}` }),
-    },
-    body: JSON.stringify(
-      isGeminiUrl
-        ? {
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.45,
-              topK: 40,
-              topP: 0.9,
-              maxOutputTokens: 4200,
-            },
-          }
-        : {
-            model: process.env.GEMINI_LLM_MODEL ?? "gemini-2.5-flash",
-            prompt,
-            temperature: 0.45,
-            max_tokens: 4200,
-          },
-    ),
+  const data = await requestGEMINILLM({
+    prompt,
+    model: process.env.GEMINI_LLM_MODEL ?? "gemini-2.5-flash",
+    temperature: 0.45,
+    max_tokens: 4200,
+    topK: 40,
+    topP: 0.9,
   });
-
-  const data = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(`LLM 요청 실패: ${JSON.stringify(data)}`);
-  }
 
   return ensureHtmlParagraphs(extractTextFromLLMResponse(data));
 }

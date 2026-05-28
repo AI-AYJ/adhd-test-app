@@ -1,5 +1,10 @@
+const DEFAULT_GEMINI_EMBEDDING_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent';
+const DEFAULT_GEMINI_LLM_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+
 function getGEMINIApiKey() {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
 
   if (!apiKey) {
     throw new Error('Missing environment variable GEMINI_API_KEY');
@@ -13,7 +18,9 @@ function isGoogleGeminiUrl(url: string) {
 }
 
 function withGeminiApiKey(url: string) {
-  return `${url}${url.includes('?') ? '&' : '?'}key=${getGEMINIApiKey()}`;
+  const parsedUrl = new URL(url);
+  parsedUrl.searchParams.set('key', getGEMINIApiKey());
+  return parsedUrl.toString();
 }
 
 function getGEMINIHeaders(url: string) {
@@ -27,7 +34,7 @@ export async function requestGEMINIEmbedding(
   input: string,
   model = 'gemini-embedding-001'
 ) {
-  const embeddingUrl = process.env.GEMINI_EMBEDDING_URL;
+  const embeddingUrl = (process.env.GEMINI_EMBEDDING_URL || DEFAULT_GEMINI_EMBEDDING_URL).trim();
 
   if (!embeddingUrl) {
     throw new Error(
@@ -76,7 +83,7 @@ export async function requestGEMINILLM(options: {
   stop?: string[];
   [key: string]: any;
 }) {
-  const llmUrl = process.env.GEMINI_LLM_URL;
+  const llmUrl = (process.env.GEMINI_LLM_URL || DEFAULT_GEMINI_LLM_URL).trim();
 
   if (!llmUrl) {
     throw new Error(
@@ -90,6 +97,8 @@ export async function requestGEMINILLM(options: {
     temperature = 0.7,
     max_tokens = 1024,
     stop,
+    topK,
+    topP,
     ...rest
   } = options;
 
@@ -103,6 +112,8 @@ export async function requestGEMINILLM(options: {
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               temperature,
+              ...(typeof topK === 'number' ? { topK } : {}),
+              ...(typeof topP === 'number' ? { topP } : {}),
               maxOutputTokens: max_tokens,
             },
             ...rest,
