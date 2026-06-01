@@ -1,18 +1,7 @@
 import { NextResponse } from "next/server";
+import { requestGEMINIEmbedding, requestGEMINILLM } from "@/lib/gemini";
+import { ADHD_REPORT_SYSTEM_PROMPT } from "@/lib/prompts/adhdReportSystemPrompt";
 import { supabase, supabaseUrl } from "@/lib/supabase";
-import { requestGEMINILLM } from "@/lib/gemini";
-
-type ReportMetrics = {
-  inattention_count?: number;
-  hyperactivity_count?: number;
-  cpt_attention?: number;
-  cpt_timeliness?: number;
-  cpt_impulsivity?: number;
-  cpt_hyperactivity?: number;
-  gaze_off_task_ratio?: number;
-  head_movement_variability?: number;
-  final_risk_level?: string | null;
-};
 
 type NormalizedReportMetrics = {
   inattention_count: number;
@@ -23,12 +12,51 @@ type NormalizedReportMetrics = {
   cpt_hyperactivity: number;
   gaze_off_task_ratio: number;
   head_movement_variability: number;
+  head_pose_forward_ratio: number;
+  head_pose_left_ratio: number;
+  head_pose_right_ratio: number;
+  head_pose_down_ratio: number;
+  head_yaw_std: number;
+  head_pitch_std: number;
+  head_roll_std: number;
+  head_rotation_variability: number;
+  head_attention_score: number;
+  head_attention_score_adjusted: number;
+  head_pose_raw: Record<string, unknown> | null;
   final_risk_level: string;
+};
+
+type GeminiResponse = {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{ text?: string }>;
+    };
+  }>;
+  choices?: Array<{
+    message?: { content?: string };
+    text?: string;
+  }>;
+  text?: string;
+  content?: string;
+  output_text?: string;
+};
+
+type RagMatch = {
+  title?: string | null;
+  content?: string | null;
+  source?: string | null;
+  page_start?: number | null;
+  section?: string | null;
+  similarity?: number | null;
 };
 
 function toNumber(value: unknown, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function toJsonObject(value: unknown) {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
 }
 
 function getKoreanTimestamp() {
@@ -37,6 +65,10 @@ function getKoreanTimestamp() {
 }
 
 function normalizeMetrics(body: Record<string, unknown>): NormalizedReportMetrics {
+  const headRotationVariability = toNumber(
+    body.head_rotation_variability ?? body.head_movement_variability,
+  );
+
   return {
     inattention_count: toNumber(body.inattention_count),
     hyperactivity_count: toNumber(body.hyperactivity_count),
@@ -45,7 +77,18 @@ function normalizeMetrics(body: Record<string, unknown>): NormalizedReportMetric
     cpt_impulsivity: toNumber(body.cpt_impulsivity),
     cpt_hyperactivity: toNumber(body.cpt_hyperactivity),
     gaze_off_task_ratio: toNumber(body.gaze_off_task_ratio),
-    head_movement_variability: toNumber(body.head_movement_variability),
+    head_movement_variability: headRotationVariability,
+    head_pose_forward_ratio: toNumber(body.head_pose_forward_ratio),
+    head_pose_left_ratio: toNumber(body.head_pose_left_ratio),
+    head_pose_right_ratio: toNumber(body.head_pose_right_ratio),
+    head_pose_down_ratio: toNumber(body.head_pose_down_ratio),
+    head_yaw_std: toNumber(body.head_yaw_std),
+    head_pitch_std: toNumber(body.head_pitch_std),
+    head_roll_std: toNumber(body.head_roll_std),
+    head_rotation_variability: headRotationVariability,
+    head_attention_score: toNumber(body.head_attention_score),
+    head_attention_score_adjusted: toNumber(body.head_attention_score_adjusted),
+    head_pose_raw: toJsonObject(body.head_pose_raw),
     final_risk_level:
       typeof body.final_risk_level === "string" && body.final_risk_level.trim()
         ? body.final_risk_level
@@ -53,37 +96,68 @@ function normalizeMetrics(body: Record<string, unknown>): NormalizedReportMetric
   };
 }
 
-function buildPrompt(metrics: NormalizedReportMetrics) {
-  return `당신은 ADHD 선별검사 결과를 보호자와 성인 사용자에게 설명하는 정신건강의학과 임상심리 전문가입니다.
-
-아래 설문 및 CPT, 시선 추적, 움직임 데이터를 바탕으로 병원에서 제공하는 검사 결과지처럼 친절하고 정확한 한국어 리포트를 작성해 주세요.
-
-[입력 데이터]
-- 설문 부주의 응답 수: ${metrics.inattention_count}
-- 설문 과활동성/충동성 응답 수: ${metrics.hyperactivity_count}
-- CPT 정반응 수: ${metrics.cpt_attention}
-- CPT 평균 반응시간: ${metrics.cpt_timeliness}ms
-- CPT 오경보 수: ${metrics.cpt_impulsivity}
-- CPT 과활동성 점수: ${metrics.cpt_hyperactivity}
-- 과제 중 시선 이탈률: ${metrics.gaze_off_task_ratio}%
-- 머리 움직임 변동성: ${metrics.head_movement_variability}
-- 시스템 산출 위험도: ${metrics.final_risk_level}
-
-[작성 형식]
-1. 반드시 HTML 문단 형태로만 작성해 주세요. 각 문단은 <p>...</p>로 감싸 주세요.
-2. 각 문단의 맨 앞에는 <strong>검사 개요</strong>, <strong>검사 태도 및 수행 흐름</strong>, <strong>핵심 소견</strong>, <strong>주의 지속성</strong>, <strong>반응 속도와 일관성</strong>, <strong>충동성 및 반응 조절</strong>, <strong>시선 및 움직임</strong>, <strong>일상 기능에서의 의미</strong>, <strong>종합 의견</strong>, <strong>권장 사항</strong>, <strong>추적 관찰 포인트</strong> 중 하나의 제목을 넣어 주세요.
-3. 진단을 단정하지 말고, "선별검사 결과", "가능성", "추가 평가가 필요할 수 있음"처럼 임상적으로 조심스러운 표현을 사용해 주세요.
-4. 숫자를 그대로 나열하지 말고, 각 지표가 실제 집중, 반응 억제, 과제 유지, 시선 유지에 어떤 의미를 갖는지 충분히 풀어서 설명해 주세요.
-5. 검사 결과가 높게 나온 영역과 상대적으로 안정적인 영역을 구분해서 설명해 주세요.
-6. 보호자 또는 사용자가 바로 이해할 수 있도록 쉬운 표현을 쓰되, 결과지처럼 전문적인 문장으로 작성해 주세요.
-7. 불안감을 과하게 키우지 말고, 필요한 경우 전문가 상담, 수면/환경/학습 습관 점검, 추가 종합심리검사를 권장해 주세요.
-8. 전체 길이는 11~14문단으로 작성하고, 각 문단은 2~4문장으로 충분히 길게 작성해 주세요.
-9. 마지막 문단에는 이 검사가 확정 진단이 아니라 선별 목적이라는 점과, 일상 기능 저하가 있으면 전문가 상담이 필요하다는 점을 분명히 적어 주세요.`;
+function buildRagQuery(metrics: NormalizedReportMetrics) {
+  return [
+    `ASRS 부주의 응답 수: ${metrics.inattention_count}`,
+    `ASRS 과잉행동 및 충동성 응답 수: ${metrics.hyperactivity_count}`,
+    `CPT 주의 지표: ${metrics.cpt_attention}`,
+    `CPT 반응 속도 및 일관성 지표: ${metrics.cpt_timeliness}`,
+    `CPT 충동성 지표: ${metrics.cpt_impulsivity}`,
+    `CPT 과잉행동 보조 지표: ${metrics.cpt_hyperactivity}`,
+    `시선 이탈 비율: ${metrics.gaze_off_task_ratio}`,
+    `머리 움직임 변동성: ${metrics.head_movement_variability}`,
+    `시스템 1차 참고 위험도: ${metrics.final_risk_level}`,
+  ].join("\n");
 }
 
-function extractTextFromLLMResponse(data: any) {
+function formatRetrievedContext(matches: RagMatch[]) {
+  return matches
+    .filter((match) => match.content)
+    .map((match, index) => {
+      const title = match.title || "참고 문서";
+      const page = match.page_start ? `, p.${match.page_start}` : "";
+      const section = match.section ? `, ${match.section}` : "";
+      const source = match.source ? `, ${match.source}` : "";
+      return `[${index + 1}] ${title}${page}${section}${source}\n${match.content}`;
+    })
+    .join("\n\n");
+}
+
+async function retrieveRagContext(metrics: NormalizedReportMetrics) {
+  const queryEmbedding = await requestGEMINIEmbedding(buildRagQuery(metrics));
+  const { data, error } = await supabase.rpc("match_rag_documents", {
+    query_embedding: queryEmbedding,
+    match_count: 5,
+    match_threshold: 0.2,
+    filter_category: null,
+  });
+
+  if (error) {
+    console.error("RAG retrieval failed in /api/generate-report:", error);
+    return "";
+  }
+
+  return formatRetrievedContext((data ?? []) as RagMatch[]);
+}
+
+function buildReportPrompt(metrics: NormalizedReportMetrics, retrievedContext: string) {
+  return `다음 입력을 바탕으로 ADHD 스크리닝 리포트를 작성해 주세요.
+
+입력:
+${JSON.stringify(metrics, null, 2)}
+
+RAG 참고 문맥:
+${retrievedContext || "없음"}
+
+주의:
+- 입력에 없는 값은 만들지 마세요.
+- RAG 참고 문맥이 있으면 우선 반영하되, 진단처럼 표현하지 마세요.
+- 모든 문단은 <p>...</p> HTML 형식으로 작성하세요.`;
+}
+
+function extractTextFromLLMResponse(data: GeminiResponse) {
   return (
-    data?.candidates?.[0]?.content?.parts?.map((part: any) => part?.text ?? "").join("") ||
+    data?.candidates?.[0]?.content?.parts?.map((part) => part?.text ?? "").join("") ||
     data?.choices?.[0]?.message?.content ||
     data?.choices?.[0]?.text ||
     data?.text ||
@@ -96,7 +170,7 @@ function extractTextFromLLMResponse(data: any) {
 function ensureHtmlParagraphs(text: string) {
   const trimmed = text.trim();
   if (!trimmed) {
-    throw new Error("LLM 응답에 리포트 내용이 없습니다.");
+    throw new Error("LLM response did not include report text.");
   }
 
   if (/<p[\s>]/i.test(trimmed)) {
@@ -112,9 +186,11 @@ function ensureHtmlParagraphs(text: string) {
 }
 
 async function generateReportWithLLM(metrics: NormalizedReportMetrics) {
-  const prompt = buildPrompt(metrics);
+  const retrievedContext = await retrieveRagContext(metrics);
+  const prompt = buildReportPrompt(metrics, retrievedContext);
   const data = await requestGEMINILLM({
     prompt,
+    systemInstruction: ADHD_REPORT_SYSTEM_PROMPT,
     model: process.env.GEMINI_LLM_MODEL ?? "gemini-2.5-flash",
     temperature: 0.45,
     max_tokens: 4200,
@@ -129,7 +205,7 @@ export async function POST(req: Request) {
   let stage = "parse-request";
 
   try {
-    const body = await req.json();
+    const body = (await req.json()) as Record<string, unknown>;
     stage = "normalize-metrics";
     const metrics = normalizeMetrics(body);
 

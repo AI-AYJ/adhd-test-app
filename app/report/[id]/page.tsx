@@ -17,6 +17,9 @@ type ReportData = {
   cpt_hyperactivity: number;
   gaze_off_task_ratio: number;
   head_movement_variability: number;
+  head_rotation_variability?: number | null;
+  head_pose_forward_ratio?: number | null;
+  head_attention_score_adjusted?: number | null;
 };
 
 type MetricTone = "emerald" | "amber" | "rose" | "blue";
@@ -57,55 +60,72 @@ function getConcernLabel(score: number) {
 }
 
 function buildMetrics(report: ReportData): Metric[] {
-  const inattentionScore = clamp((report.inattention_count / 9) * 100);
-  const hyperactivityScore = clamp((report.hyperactivity_count / 9) * 100);
-  const omissionScore = clamp(100 - (report.cpt_attention / 20) * 100);
-  const impulsivityScore = clamp((report.cpt_impulsivity / 8) * 100);
-  const gazeScore = clamp(report.gaze_off_task_ratio);
-  const movementScore = clamp((report.head_movement_variability / 180) * 100);
+  const headRotationVariability =
+    report.head_rotation_variability ?? report.head_movement_variability ?? 0;
+  const headForwardRatio = report.head_pose_forward_ratio ?? 0;
+  const headAdjustedAttention = report.head_attention_score_adjusted ?? 0;
+
+  const inattentionRisk = clamp((report.inattention_count / 9) * 100);
+  const hyperactivityRisk = clamp((report.hyperactivity_count / 9) * 100);
+  const omissionRisk = clamp(100 - (report.cpt_attention / 20) * 100);
+  const impulsivityRisk = clamp((report.cpt_impulsivity / 8) * 100);
+  const gazeRisk = clamp(report.gaze_off_task_ratio);
+  const movementRisk = clamp(
+    Math.round(
+      headRotationVariability * 2.8 +
+        Math.max(0, 85 - headForwardRatio) * 0.7 +
+        Math.max(0, 75 - headAdjustedAttention) * 0.6,
+    ),
+  );
 
   return [
     {
       label: "부주의 경향",
       value: `${report.inattention_count}개`,
-      detail: "설문에서 부주의 관련 응답이 얼마나 두드러졌는지 봅니다.",
-      score: inattentionScore,
-      tone: getTone(inattentionScore),
+      detail: "설문에서 주의 유지나 산만함과 관련된 응답 수입니다.",
+      score: inattentionRisk,
+      tone: getTone(inattentionRisk),
     },
     {
-      label: "과활동/충동성",
+      label: "과잉행동·충동성",
       value: `${report.hyperactivity_count}개`,
-      detail: "움직임, 충동 반응, 기다림 어려움과 관련된 응답입니다.",
-      score: hyperactivityScore,
-      tone: getTone(hyperactivityScore),
+      detail: "설문에서 안절부절못함이나 충동 반응과 관련된 응답 수입니다.",
+      score: hyperactivityRisk,
+      tone: getTone(hyperactivityRisk),
     },
     {
       label: "주의 지속성",
       value: `${report.cpt_attention}회`,
-      detail: "CPT에서 목표 자극을 놓치지 않고 반응한 정도입니다.",
-      score: omissionScore,
-      tone: getTone(omissionScore),
+      detail: "CPT에서 목표 자극에 정확히 반응한 정도를 보여줍니다.",
+      score: omissionRisk,
+      tone: getTone(omissionRisk),
     },
     {
       label: "반응 조절",
       value: `${report.cpt_impulsivity}회`,
-      detail: "누르지 말아야 할 상황에서 반응한 횟수입니다.",
-      score: impulsivityScore,
-      tone: getTone(impulsivityScore),
+      detail: "반응하지 않아야 할 자극에 반응한 횟수입니다.",
+      score: impulsivityRisk,
+      tone: getTone(impulsivityRisk),
     },
     {
       label: "시선 이탈",
       value: percent(report.gaze_off_task_ratio),
-      detail: "과제 중 화면/자극 영역 밖으로 시선이 벗어난 비율입니다.",
-      score: gazeScore,
-      tone: getTone(gazeScore),
+      detail: "과제 영역 밖으로 시선이 벗어난 비율입니다.",
+      score: gazeRisk,
+      tone: getTone(gazeRisk),
     },
     {
-      label: "움직임 변동성",
-      value: `${Math.round(report.head_movement_variability)}`,
-      detail: "검사 중 머리 움직임이 얼마나 불안정했는지 나타냅니다.",
-      score: movementScore,
-      tone: getTone(movementScore),
+      label: "머리 자세 변동성",
+      value:
+        headForwardRatio > 0
+          ? `V ${Math.round(headRotationVariability)} / 정면 ${Math.round(headForwardRatio)}%`
+          : `${Math.round(headRotationVariability)}`,
+      detail:
+        headForwardRatio > 0
+          ? `머리 회전 변동성, 정면 유지 비율, 보정 집중도 ${Math.round(headAdjustedAttention)}를 함께 반영했습니다.`
+          : "검사 중 머리 움직임의 변동성을 보여주는 보조 지표입니다.",
+      score: movementRisk,
+      tone: getTone(movementRisk),
     },
   ];
 }
@@ -120,7 +140,9 @@ function MetricBar({ metric }: { metric: Metric }) {
         </div>
         <div className="text-right">
           <p className="text-xl font-black text-slate-950">{metric.value}</p>
-          <p className="mt-1 text-[11px] font-bold text-slate-500">{getConcernLabel(metric.score)}</p>
+          <p className="mt-1 text-[11px] font-bold text-slate-500">
+            {getConcernLabel(metric.score)}
+          </p>
         </div>
       </div>
       <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100">
@@ -161,7 +183,9 @@ export default function ReportDetailPage() {
       }
     }
 
-    if (id) loadReport();
+    if (id) {
+      void loadReport();
+    }
   }, [id]);
 
   const metrics = useMemo(() => (report ? buildMetrics(report) : []), [report]);
@@ -207,11 +231,11 @@ export default function ReportDetailPage() {
                 ADHD Screening Report
               </p>
               <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                주의력 검사 종합 리포트
+                주의 특성 종합 리포트
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-                이 리포트는 설문, CPT 수행, 시선 추적, 움직임 지표를 함께 본 선별검사 결과입니다.
-                의학적 진단을 확정하는 자료가 아니며, 필요 시 전문가 평가와 함께 해석해야 합니다.
+                이 리포트는 설문, CPT 수행, 시선 추적, 머리 자세 지표를 함께 본 선별검사 결과입니다.
+                의료적 진단을 확정하는 자료가 아니라 행동 특성을 참고하기 위한 보조 자료입니다.
               </p>
               <p className="mt-3 text-sm font-semibold text-slate-500">
                 검사일: {new Date(report.created_at).toLocaleString("ko-KR")}
@@ -219,11 +243,18 @@ export default function ReportDetailPage() {
             </div>
 
             <div className="min-w-[220px] rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">종합 주의도</p>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
+                종합 위험도
+              </p>
               <p className="mt-3 text-4xl font-black text-slate-950">{totalScore}</p>
-              <p className="mt-1 text-sm font-bold text-slate-600">{report.final_risk_level || getConcernLabel(totalScore)}</p>
+              <p className="mt-1 text-sm font-bold text-slate-600">
+                {report.final_risk_level || getConcernLabel(totalScore)}
+              </p>
               <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white">
-                <div className={`h-full rounded-full ${toneClass[getTone(totalScore)]}`} style={{ width: `${totalScore}%` }} />
+                <div
+                  className={`h-full rounded-full ${toneClass[getTone(totalScore)]}`}
+                  style={{ width: `${totalScore}%` }}
+                />
               </div>
             </div>
           </div>
@@ -239,8 +270,12 @@ export default function ReportDetailPage() {
           <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.26em] text-blue-600">LLM Clinical Summary</p>
-                <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950">임상 해석</h2>
+                <p className="text-xs font-black uppercase tracking-[0.26em] text-blue-600">
+                  LLM Clinical Summary
+                </p>
+                <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950">
+                  해석 요약
+                </h2>
               </div>
             </div>
             <div className="mt-6 space-y-4 text-[15px] leading-8 text-slate-700 [&_p]:mb-4 [&_strong]:text-slate-950">
@@ -253,17 +288,21 @@ export default function ReportDetailPage() {
           </article>
 
           <aside className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">해석 안내</p>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">
+              해석 안내
+            </p>
             <h2 className="mt-3 text-xl font-black text-slate-950">다음 단계</h2>
             <div className="mt-5 space-y-4 text-sm leading-6 text-slate-600">
               <p>
-                검사 결과는 당일 컨디션, 수면, 화면 환경, 긴장도에 영향을 받을 수 있습니다.
+                검사 결과는 당일 컨디션, 조명, 카메라 위치, 수행 환경의 영향을 받을 수 있습니다.
               </p>
               <p>
-                일상 기능 저하가 함께 보이면 정신건강의학과 또는 임상심리 전문가와 추가 평가를 권장합니다.
+                일상 기능에서의 어려움이 함께 보인다면 정신건강의학과 전문의나 임상심리 전문가와의
+                추가 평가를 권장합니다.
               </p>
               <p>
-                보호자나 본인이 느끼는 어려움, 학교나 직장 상황, 과거력까지 함께 보아야 더 정확합니다.
+                설문 결과, 과제 수행, 학교나 직장 상황, 과거력까지 함께 보아야 더 정확한 해석이
+                가능합니다.
               </p>
             </div>
           </aside>

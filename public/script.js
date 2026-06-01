@@ -3497,6 +3497,207 @@ function drawBlendShapes(el, blendShapes) {
             };
         };
 
+        const HEAD_POSE_THRESHOLDS = Object.freeze({ yaw: 18, pitch: 16 });
+        const HEAD_POSE_ROLL_WEIGHT = 0.3;
+        const HEAD_POSE_VARIABILITY_PENALTY = 0.55;
+        const HEAD_POSE_VARIABILITY_REFERENCE = 14;
+        const HEAD_POSE_WINDOW_SIZE_FRAMES = 30;
+
+        function roundMetric(value, digits = 2) {
+            return Number(value.toFixed(digits));
+        }
+
+        function computeArrayStd(values) {
+            if (!Array.isArray(values) || values.length < 2) return 0;
+
+            const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+            const variance = values.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / (values.length - 1);
+            return Math.sqrt(Math.max(variance, 0));
+        }
+
+        function computeHeadRotationVariability(yawStd, pitchStd, rollStd, rollWeight = HEAD_POSE_ROLL_WEIGHT) {
+            return Math.sqrt(
+                (yawStd * yawStd)
+                + (pitchStd * pitchStd)
+                + (rollWeight * rollStd * rollStd)
+            );
+        }
+
+        function classifyHeadPoseState(euler, thresholds = HEAD_POSE_THRESHOLDS) {
+            if (!euler) return "unclassified";
+
+            if (Math.abs(euler.yaw) < thresholds.yaw && Math.abs(euler.pitch) < thresholds.pitch) {
+                return "forward";
+            }
+            if (euler.yaw < -thresholds.yaw) {
+                return "left";
+            }
+            if (euler.yaw > thresholds.yaw) {
+                return "right";
+            }
+            if (euler.pitch > thresholds.pitch) {
+                return "down";
+            }
+
+            return "unclassified";
+        }
+
+        function createHeadPoseMetrics() {
+            return {
+                totalFrames: 0,
+                forwardFrames: 0,
+                leftFrames: 0,
+                rightFrames: 0,
+                downFrames: 0,
+                unclassifiedFrames: 0,
+                latestState: "unclassified",
+                yaw: createRunningStat(),
+                pitch: createRunningStat(),
+                roll: createRunningStat(),
+                angularVelocity: {
+                    yaw: createRunningStat(),
+                    pitch: createRunningStat(),
+                    roll: createRunningStat(),
+                    magnitude: createRunningStat()
+                },
+                thresholds: { ...HEAD_POSE_THRESHOLDS },
+                rollWeight: HEAD_POSE_ROLL_WEIGHT,
+                variabilityPenalty: HEAD_POSE_VARIABILITY_PENALTY,
+                windowSizeFrames: HEAD_POSE_WINDOW_SIZE_FRAMES,
+                windowSamples: [],
+                windowVariabilityMax: 0,
+                lastEuler: null,
+                lastTs: null
+            };
+        }
+
+        function recordHeadPoseSample(metric, euler, now) {
+            const headPose = metric?.headPose;
+            if (!headPose || !euler) return "unclassified";
+
+            headPose.totalFrames += 1;
+            pushStat(headPose.yaw, euler.yaw);
+            pushStat(headPose.pitch, euler.pitch);
+            pushStat(headPose.roll, euler.roll);
+
+            const state = classifyHeadPoseState(euler, headPose.thresholds);
+            const stateKey = `${state}Frames`;
+            if (typeof headPose[stateKey] === "number") {
+                headPose[stateKey] += 1;
+            } else {
+                headPose.unclassifiedFrames += 1;
+            }
+
+            const sample = {
+                yaw: euler.yaw,
+                pitch: euler.pitch,
+                roll: euler.roll
+            };
+            headPose.windowSamples.push(sample);
+            if (headPose.windowSamples.length > headPose.windowSizeFrames) {
+                headPose.windowSamples.shift();
+            }
+
+            if (headPose.windowSamples.length >= 5) {
+                const yawStd = computeArrayStd(headPose.windowSamples.map((entry) => entry.yaw));
+                const pitchStd = computeArrayStd(headPose.windowSamples.map((entry) => entry.pitch));
+                const rollStd = computeArrayStd(headPose.windowSamples.map((entry) => entry.roll));
+                const windowVariability = computeHeadRotationVariability(
+                    yawStd,
+                    pitchStd,
+                    rollStd,
+                    headPose.rollWeight
+                );
+                headPose.windowVariabilityMax = Math.max(headPose.windowVariabilityMax, windowVariability);
+            }
+
+            if (headPose.lastEuler && headPose.lastTs !== null) {
+                const deltaSeconds = Math.max((now - headPose.lastTs) / 1000, 1 / 60);
+                const yawVelocity = Math.abs((euler.yaw - headPose.lastEuler.yaw) / deltaSeconds);
+                const pitchVelocity = Math.abs((euler.pitch - headPose.lastEuler.pitch) / deltaSeconds);
+                const rollVelocity = Math.abs((euler.roll - headPose.lastEuler.roll) / deltaSeconds);
+                const velocityMagnitude = Math.sqrt(
+                    (yawVelocity * yawVelocity)
+                    + (pitchVelocity * pitchVelocity)
+                    + (headPose.rollWeight * rollVelocity * rollVelocity)
+                );
+
+                pushStat(headPose.angularVelocity.yaw, yawVelocity);
+                pushStat(headPose.angularVelocity.pitch, pitchVelocity);
+                pushStat(headPose.angularVelocity.roll, rollVelocity);
+                pushStat(headPose.angularVelocity.magnitude, velocityMagnitude);
+            }
+
+            headPose.lastEuler = { ...euler };
+            headPose.lastTs = now;
+            headPose.latestState = state;
+
+            return state;
+        }
+
+        function summarizeHeadPoseMetrics(metric) {
+            const headPose = metric?.headPose;
+            if (!headPose) {
+                return {
+                    totalFrames: 0,
+                    forwardRatio: 0,
+                    leftRatio: 0,
+                    rightRatio: 0,
+                    downRatio: 0,
+                    unclassifiedRatio: 0,
+                    yawStd: 0,
+                    pitchStd: 0,
+                    rollStd: 0,
+                    rotationVariability: 0,
+                    attentionScore: 0,
+                    attentionScoreAdjusted: 0,
+                    sessionMaxVariability: 0,
+                    angularVelocityMean: 0,
+                    angularVelocityStd: 0,
+                    latestState: "unclassified"
+                };
+            }
+
+            const yawStd = statStd(headPose.yaw);
+            const pitchStd = statStd(headPose.pitch);
+            const rollStd = statStd(headPose.roll);
+            const rotationVariability = computeHeadRotationVariability(
+                yawStd,
+                pitchStd,
+                rollStd,
+                headPose.rollWeight
+            );
+            const totalFrames = Math.max(headPose.totalFrames, 1);
+            const forwardRatio = (headPose.forwardFrames / totalFrames) * 100;
+            const leftRatio = (headPose.leftFrames / totalFrames) * 100;
+            const rightRatio = (headPose.rightFrames / totalFrames) * 100;
+            const downRatio = (headPose.downFrames / totalFrames) * 100;
+            const unclassifiedRatio = (headPose.unclassifiedFrames / totalFrames) * 100;
+            const sessionMaxVariability = Math.max(headPose.windowVariabilityMax, rotationVariability, 1);
+            const attentionScore = forwardRatio;
+            const normalizedPenalty = clamp(rotationVariability / HEAD_POSE_VARIABILITY_REFERENCE, 0, 1);
+            const attentionScoreAdjusted = attentionScore * (1 - (headPose.variabilityPenalty * normalizedPenalty));
+
+            return {
+                totalFrames: headPose.totalFrames,
+                forwardRatio: roundMetric(forwardRatio),
+                leftRatio: roundMetric(leftRatio),
+                rightRatio: roundMetric(rightRatio),
+                downRatio: roundMetric(downRatio),
+                unclassifiedRatio: roundMetric(unclassifiedRatio),
+                yawStd: roundMetric(yawStd),
+                pitchStd: roundMetric(pitchStd),
+                rollStd: roundMetric(rollStd),
+                rotationVariability: roundMetric(rotationVariability),
+                attentionScore: roundMetric(attentionScore),
+                attentionScoreAdjusted: roundMetric(Math.max(0, attentionScoreAdjusted)),
+                sessionMaxVariability: roundMetric(sessionMaxVariability),
+                angularVelocityMean: roundMetric(headPose.angularVelocity.magnitude.mean || 0),
+                angularVelocityStd: roundMetric(statStd(headPose.angularVelocity.magnitude)),
+                latestState: headPose.latestState
+            };
+        }
+
         createCptMetrics = function createCptMetrics() {
             return {
                 hits: 0,
@@ -3512,6 +3713,9 @@ function drawBlendShapes(el, blendShapes) {
                 lastAoiZone: null,
                 lastAoiTick: null,
                 blinksInStimulus: 0,
+                headPose: createHeadPoseMetrics(),
+                headPoseSummary: null,
+                headMovementVariance: 0,
                 blockStats: Array.from({ length: 4 }, () => ({
                     hits: 0,
                     gazeTotalMs: 0,
@@ -3615,14 +3819,14 @@ function drawBlendShapes(el, blendShapes) {
 
         metricBucket = function metricBucket(score, { reverse = false } = {}) {
             if (reverse) {
-                if (score >= 55) return { tone: "?믪쓬", color: "text-rose-600" };
-                if (score >= 25) return { tone: "以묎컙", color: "text-amber-500" };
-                return { tone: "??쓬", color: "text-emerald-600" };
+                if (score >= 55) return { tone: "높음", color: "text-rose-600" };
+                if (score >= 25) return { tone: "중간", color: "text-amber-500" };
+                return { tone: "낮음", color: "text-emerald-600" };
             }
 
-            if (score >= 75) return { tone: "?덉젙", color: "text-emerald-600" };
-            if (score >= 45) return { tone: "蹂댄넻", color: "text-amber-500" };
-            return { tone: "二쇱쓽 ?꾩슂", color: "text-rose-600" };
+            if (score >= 75) return { tone: "안정", color: "text-emerald-600" };
+            if (score >= 45) return { tone: "보통", color: "text-amber-500" };
+            return { tone: "주의 필요", color: "text-rose-600" };
         };
 
         handleWebGazerPrediction = function handleWebGazerPrediction(data, elapsedTime) {
@@ -4833,6 +5037,7 @@ function drawBlendShapes(el, blendShapes) {
                 const now = performance.now();
                 const result = faceLandmarker.detectForVideo(dom.cptWebcam, now);
                 const landmarks = result?.faceLandmarks?.[0] ?? null;
+                const matrix = result?.facialTransformationMatrixes?.[0]?.data ?? null;
                 const blendshapes = result?.faceBlendshapes?.[0]?.categories ?? [];
                 const blockMetric = cptMetrics.blockStats[cptCurrentBlock - 1] ?? null;
                 const delta = cptMetrics.lastAoiTick === null ? 0 : Math.max(0, now - cptMetrics.lastAoiTick);
@@ -4842,11 +5047,13 @@ function drawBlendShapes(el, blendShapes) {
                 cptMetrics.lastAoiTick = now;
 
                 let yaw = 0;
+                let pitch = 0;
+                let roll = 0;
                 let blink = 0;
+                let headPoseState = "unclassified";
 
                 if (landmarks) {
                     cptMetrics.faceSamples += 1;
-                    yaw = (landmarks[1].x - (landmarks[33].x + landmarks[263].x) / 2) * 100;
                     blink = (safeBlendshapeScore(blendshapes, "eyeBlinkLeft") + safeBlendshapeScore(blendshapes, "eyeBlinkRight")) / 2;
 
                     if (cptGameState === "STIMULUS" && blink > 0.5) {
@@ -4854,6 +5061,14 @@ function drawBlendShapes(el, blendShapes) {
                     }
 
                     drawCptOverlay(landmarks);
+                }
+
+                if (matrix) {
+                    const euler = matrixToEuler(matrix);
+                    yaw = euler.yaw;
+                    pitch = euler.pitch;
+                    roll = euler.roll;
+                    headPoseState = recordHeadPoseSample(cptMetrics, euler, now);
                 }
 
                 if (classification) {
@@ -4874,7 +5089,7 @@ function drawBlendShapes(el, blendShapes) {
                 dom.cptLiveYaw.textContent = yaw.toFixed(1) + " deg";
                 dom.cptYawCursor.style.left = `${clamp(50 + yaw, 0, 100)}%`;
                 dom.cptIndicatorGaze.style.backgroundColor = classification?.zone === "task" ? "#22c55e" : "#ef4444";
-                dom.cptIndicatorHead.style.backgroundColor = sample ? "#22c55e" : "#ef4444";
+                dom.cptIndicatorHead.style.backgroundColor = headPoseState === "forward" ? "#22c55e" : "#ef4444";
 
                 cptDataLog.push({
                     t: now,
@@ -4887,6 +5102,9 @@ function drawBlendShapes(el, blendShapes) {
                     aoi: classification?.zone ?? "unclassified",
                     insideViewport: sample?.insideViewport ?? null,
                     yaw: Number(yaw.toFixed(3)),
+                    pitch: Number(pitch.toFixed(3)),
+                    roll: Number(roll.toFixed(3)),
+                    headPoseState,
                     blink: Number(blink.toFixed(4))
                 });
             }
@@ -4909,6 +5127,10 @@ function drawBlendShapes(el, blendShapes) {
             const rtVariance = cptMetrics.rts.reduce((sum, value) => sum + Math.pow(value - rtMean, 2), 0) / Math.max(1, cptMetrics.rts.length);
             const rtSD = Math.round(Math.sqrt(rtVariance)) || 0;
             const distractScale = Math.round((cptMetrics.distractMs / Math.max(1, cptMetrics.gazeTotalMs)) * 100) || 0;
+            const headPoseSummary = summarizeHeadPoseMetrics(cptMetrics);
+
+            cptMetrics.headPoseSummary = headPoseSummary;
+            cptMetrics.headMovementVariance = headPoseSummary.rotationVariability;
 
             dom.cptResOmissionRate.textContent = String(omissionRate);
             dom.cptResCommissionRate.textContent = String(commissionRate);
@@ -4942,6 +5164,18 @@ function drawBlendShapes(el, blendShapes) {
                 interpretation += `<p>시각 방해 구간에서 Task AOI 밖으로 시선이 벗어난 비율이 기준 구간보다 ${visualDist - baselineDist}%p 증가했습니다.</p>`;
             }
 
+            if (headPoseSummary.forwardRatio < 80) {
+                interpretation += `<p>머리 자세 정면 유지 비율은 ${headPoseSummary.forwardRatio}%로 나타났습니다. 과제 중 시선뿐 아니라 머리 방향도 자주 바뀌었을 가능성을 함께 참고할 수 있습니다.</p>`;
+            }
+
+            if (headPoseSummary.rotationVariability > 12) {
+                interpretation += `<p>머리 회전 변동성은 ${headPoseSummary.rotationVariability}로 계산되었습니다. 좌우 또는 상하 머리 회전의 일관성이 낮아 집중 상태가 흔들렸을 가능성을 보조적으로 해석할 수 있습니다.</p>`;
+            }
+
+            if (headPoseSummary.attentionScoreAdjusted < 65) {
+                interpretation += `<p>머리 자세 기반 보정 집중도는 ${headPoseSummary.attentionScoreAdjusted}로 나타났습니다. 정면 유지 비율과 회전 변동성을 함께 보면 과제 몰입이 충분히 안정적이지 않았을 수 있습니다.</p>`;
+            }
+
             if (!interpretation) {
                 interpretation = "<p>과제 수행 동안 반응 통제와 AOI 기반 주의 배분 지표가 비교적 안정적으로 유지되었습니다.</p>";
             }
@@ -4971,26 +5205,13 @@ function drawBlendShapes(el, blendShapes) {
 
         async function sendAnalyticsToServer() {
             try {
-                const metrics = window.cptAnalytics?.metrics || {};
-                const avgRt = metrics.rts?.length
-                    ? Math.round(metrics.rts.reduce((a, b) => a + b, 0) / metrics.rts.length)
-                    : 0;
                 const dbPayload = {
-                    inattention_count: metrics.omits ?? 0,
-                    hyperactivity_count: metrics.hyperactivity ?? 0,
-                    cpt_attention: metrics.hits ?? 0,
-                    cpt_timeliness: avgRt,
-                    cpt_impulsivity: metrics.commission ?? 0,
-                    cpt_hyperactivity: metrics.hyperactivity ?? 0,
-                    gaze_off_task_ratio: metrics.gazeTotalMs > 0
-                        ? Number(((metrics.distractMs / metrics.gazeTotalMs) * 100).toFixed(2))
-                        : 0,
-                    head_movement_variability: metrics.headMovementVariance ?? 0,
+                    ...buildCptReportPayload(),
                     final_risk_level: window.cptAnalytics?.finalRiskLevel ?? null,
                     report: window.cptAnalytics?.report ?? null,
                     raw: window.cptAnalytics
                 };
-                console.log('metrics:', metrics);
+                console.log('metrics:', window.cptAnalytics?.metrics || {});
                 console.log('DB PAYLOAD:', dbPayload);
                 console.log('SENDING ANALYTICS');
 
@@ -5150,7 +5371,41 @@ function drawBlendShapes(el, blendShapes) {
         }
 
         // ===== 由ы룷???앹꽦 愿???⑥닔 =====
-        
+
+        function buildHeadPosePayload(metrics) {
+            const headPoseSummary = metrics?.headPoseSummary ?? summarizeHeadPoseMetrics(metrics);
+            const headPose = metrics?.headPose ?? null;
+
+            return {
+                head_movement_variability: headPoseSummary.rotationVariability ?? 0,
+                head_pose_forward_ratio: headPoseSummary.forwardRatio ?? 0,
+                head_pose_left_ratio: headPoseSummary.leftRatio ?? 0,
+                head_pose_right_ratio: headPoseSummary.rightRatio ?? 0,
+                head_pose_down_ratio: headPoseSummary.downRatio ?? 0,
+                head_yaw_std: headPoseSummary.yawStd ?? 0,
+                head_pitch_std: headPoseSummary.pitchStd ?? 0,
+                head_roll_std: headPoseSummary.rollStd ?? 0,
+                head_rotation_variability: headPoseSummary.rotationVariability ?? 0,
+                head_attention_score: headPoseSummary.attentionScore ?? 0,
+                head_attention_score_adjusted: headPoseSummary.attentionScoreAdjusted ?? 0,
+                head_pose_raw: headPose ? {
+                    thresholds: headPose.thresholds,
+                    totalFrames: headPoseSummary.totalFrames ?? 0,
+                    stateCounts: {
+                        forward: headPose.forwardFrames ?? 0,
+                        left: headPose.leftFrames ?? 0,
+                        right: headPose.rightFrames ?? 0,
+                        down: headPose.downFrames ?? 0,
+                        unclassified: headPose.unclassifiedFrames ?? 0
+                    },
+                    latestState: headPoseSummary.latestState ?? "unclassified",
+                    sessionMaxVariability: headPoseSummary.sessionMaxVariability ?? 0,
+                    angularVelocityMean: headPoseSummary.angularVelocityMean ?? 0,
+                    angularVelocityStd: headPoseSummary.angularVelocityStd ?? 0
+                } : null
+            };
+        }
+
         function buildCptReportPayload() {
             const metrics = window.cptAnalytics?.metrics || cptMetrics || {};
             const avgRt = metrics.rts?.length
@@ -5167,7 +5422,7 @@ function drawBlendShapes(el, blendShapes) {
                 gaze_off_task_ratio: metrics.gazeTotalMs > 0
                     ? Number(((metrics.distractMs / metrics.gazeTotalMs) * 100).toFixed(2))
                     : 0,
-                head_movement_variability: metrics.headMovementVariance ?? 0,
+                ...buildHeadPosePayload(metrics),
                 final_risk_level: window.cptAnalytics?.finalRiskLevel ?? "분석 완료"
             };
         }
@@ -5328,16 +5583,26 @@ function drawBlendShapes(el, blendShapes) {
                 }
             }
 
-            buildFriendlySummary = function buildFriendlySummary() {
-                const metrics = aggregateMetrics();
-                const screening = typeof getSurveyScreeningBreakdown === "function" ? getSurveyScreeningBreakdown() : null;
-                const focusScore = clamp(Math.round((metrics.attentionRatio || 0) * 100), 0, 100);
-                const distractScore = clamp(100 - Math.round((metrics.awayRatio || 0) * 100), 0, 100);
-                const responseSeconds = (metrics.averageResponseMs / 1000).toFixed(1);
-                const movementScore = clamp(100 - Math.round(metrics.headMotionStd || 0), 0, 100);
+        buildFriendlySummary = function buildFriendlySummary() {
+            const metrics = aggregateMetrics();
+            const screening = typeof getSurveyScreeningBreakdown === "function" ? getSurveyScreeningBreakdown() : null;
+            const focusScore = clamp(Math.round((metrics.attentionRatio || 0) * 100), 0, 100);
+            const distractScore = clamp(100 - Math.round((metrics.awayRatio || 0) * 100), 0, 100);
+            const responseSeconds = (metrics.averageResponseMs / 1000).toFixed(1);
+            const cptHeadPoseSummary = cptMetrics?.faceSamples
+                ? (cptMetrics.headPoseSummary ?? summarizeHeadPoseMetrics(cptMetrics))
+                : null;
+            const movementPenalty = cptHeadPoseSummary
+                ? Math.round(
+                    (cptHeadPoseSummary.rotationVariability * 3.2)
+                    + Math.max(0, 85 - cptHeadPoseSummary.forwardRatio) * 0.9
+                    + Math.max(0, 75 - cptHeadPoseSummary.attentionScoreAdjusted) * 0.8
+                )
+                : Math.round((metrics.headMotionStd || 0) * 6);
+            const movementScore = clamp(100 - movementPenalty, 0, 100);
 
-                return {
-                    cards: [
+            return {
+                cards: [
                         {
                             title: "설문 판정",
                             score: screening?.screeningPositive ? 100 : 0,
@@ -5364,10 +5629,14 @@ function drawBlendShapes(el, blendShapes) {
                             desc: "너무 빠른 응답이 반복되면 문항을 충분히 읽지 않았을 가능성을 참고합니다."
                         },
                         {
-                            title: "움직임 안정성",
+                            title: "머리 자세 안정성",
                             score: movementScore,
-                            hint: `머리 움직임 변동성 지표는 ${(metrics.headMotionStd || 0).toFixed(1)}입니다.`,
-                            desc: "검사 중 머리 움직임의 변동성을 보조 지표로 확인합니다."
+                            hint: cptHeadPoseSummary
+                                ? `정면 유지 ${Math.round(cptHeadPoseSummary.forwardRatio)}%, 회전 변동성 ${cptHeadPoseSummary.rotationVariability}, 보정 집중도 ${cptHeadPoseSummary.attentionScoreAdjusted}입니다.`
+                                : `머리 움직임 변동성 지표는 ${(metrics.headMotionStd || 0).toFixed(1)}입니다.`,
+                            desc: cptHeadPoseSummary
+                                ? "CPT 중 머리 회전 변동성과 정면 유지 비율을 함께 반영한 안정성 지표입니다."
+                                : "검사 중 머리 움직임의 변동성을 보조 지표로 확인합니다."
                         },
                         {
                             title: "주의 분산",
@@ -5395,7 +5664,13 @@ function drawBlendShapes(el, blendShapes) {
                 }
                 if (dom.summaryCards) {
                     dom.summaryCards.innerHTML = summary.cards.map((card) => {
-                        const bucket = card.bucket ?? metricBucket(card.score, { reverse: !!card.reverseTone });
+                        const rawBucket = card.bucket ?? metricBucket(card.score, { reverse: !!card.reverseTone });
+                        const bucket = {
+                            ...rawBucket,
+                            tone: card.reverseTone
+                                ? (card.score >= 55 ? "높음" : card.score >= 25 ? "중간" : "낮음")
+                                : (card.score >= 75 ? "안정" : card.score >= 45 ? "보통" : "주의 필요")
+                        };
                         const valueMarkup = card.valueLabel
                             ? `<p class="mt-3 text-4xl font-black text-slate-900">${card.valueLabel}</p>`
                             : `<p class="mt-3 text-4xl font-black text-slate-900">${card.score}<span class="text-2xl">점</span></p>`;

@@ -1,6 +1,7 @@
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const DEFAULT_GEMINI_EMBEDDING_MODEL = 'gemini-embedding-001';
 const DEFAULT_GEMINI_LLM_MODEL = 'gemini-2.5-flash';
+const DEFAULT_GEMINI_EMBEDDING_DIMENSIONS = 768;
 
 function getGEMINIApiKey() {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
@@ -89,13 +90,17 @@ async function fetchGeminiWithRetry(url: string, init: RequestInit) {
 
 export async function requestGEMINIEmbedding(
   input: string,
-  model = process.env.GEMINI_EMBEDDING_MODEL || DEFAULT_GEMINI_EMBEDDING_MODEL
+  model = process.env.GEMINI_EMBEDDING_MODEL || DEFAULT_GEMINI_EMBEDDING_MODEL,
+  outputDimensionality = DEFAULT_GEMINI_EMBEDDING_DIMENSIONS
 ) {
   const requestUrl = buildGoogleGeminiUrl(model, DEFAULT_GEMINI_EMBEDDING_MODEL, 'embedContent');
   const { response: res, data } = await fetchGeminiWithRetry(requestUrl, {
     method: 'POST',
     headers: getGEMINIHeaders(),
-    body: JSON.stringify({ content: { parts: [{ text: input }] } }),
+    body: JSON.stringify({
+      content: { parts: [{ text: input }] },
+      output_dimensionality: outputDimensionality,
+    }),
   });
 
   if (!res) {
@@ -121,6 +126,7 @@ export async function requestGEMINIEmbedding(
 
 export async function requestGEMINILLM(options: {
   prompt: string;
+  systemInstruction?: string;
   model?: string;
   temperature?: number;
   max_tokens?: number;
@@ -129,6 +135,7 @@ export async function requestGEMINILLM(options: {
 }) {
   const {
     prompt,
+    systemInstruction,
     model = process.env.GEMINI_LLM_MODEL || DEFAULT_GEMINI_LLM_MODEL,
     temperature = 0.7,
     max_tokens = 1024,
@@ -142,7 +149,10 @@ export async function requestGEMINILLM(options: {
     method: 'POST',
     headers: getGEMINIHeaders(),
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
+      ...(systemInstruction
+        ? { systemInstruction: { parts: [{ text: systemInstruction }] } }
+        : {}),
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         temperature,
         ...(typeof topK === 'number' ? { topK } : {}),

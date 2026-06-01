@@ -267,7 +267,7 @@ export default function Home() {
   const [surveyStarted, setSurveyStarted] = useState(false);
 
   useEffect(() => {
-    const mainScriptVersion = "20260524-07";
+    const mainScriptVersion = "20260601-01";
 
     const loadMainScript = () => {
       const existingMain = document.getElementById("fast-main-script") as HTMLScriptElement | null;
