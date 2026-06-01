@@ -658,9 +658,9 @@ function drawBlendShapes(el, blendShapes) {
         }
 
         function metricBucket(score) {
-            if (score >= 75) return { tone: "안정", color: "text-emerald-600" };
-            if (score >= 45) return { tone: "보통", color: "text-amber-500" };
-            return { tone: "주의 필요", color: "text-rose-600" };
+            if (score >= 75) return { tone: "\uC548\uC815", color: "text-emerald-600" };
+            if (score >= 45) return { tone: "\uBCF4\uD1B5", color: "text-amber-500" };
+            return { tone: "\uC8FC\uC758 \uD544\uC694", color: "text-rose-600" };
         }
 
         function questionMetricTemplate(question, part, index) {
@@ -3819,14 +3819,14 @@ function drawBlendShapes(el, blendShapes) {
 
         metricBucket = function metricBucket(score, { reverse = false } = {}) {
             if (reverse) {
-                if (score >= 55) return { tone: "높음", color: "text-rose-600" };
-                if (score >= 25) return { tone: "중간", color: "text-amber-500" };
-                return { tone: "낮음", color: "text-emerald-600" };
+                if (score >= 55) return { tone: "\uB192\uC74C", color: "text-rose-600" };
+                if (score >= 25) return { tone: "\uC911\uAC04", color: "text-amber-500" };
+                return { tone: "\uB0AE\uC74C", color: "text-emerald-600" };
             }
 
-            if (score >= 75) return { tone: "안정", color: "text-emerald-600" };
-            if (score >= 45) return { tone: "보통", color: "text-amber-500" };
-            return { tone: "주의 필요", color: "text-rose-600" };
+            if (score >= 75) return { tone: "\uC548\uC815", color: "text-emerald-600" };
+            if (score >= 45) return { tone: "\uBCF4\uD1B5", color: "text-amber-500" };
+            return { tone: "\uC8FC\uC758 \uD544\uC694", color: "text-rose-600" };
         };
 
         handleWebGazerPrediction = function handleWebGazerPrediction(data, elapsedTime) {
@@ -5668,8 +5668,8 @@ function drawBlendShapes(el, blendShapes) {
                         const bucket = {
                             ...rawBucket,
                             tone: card.reverseTone
-                                ? (card.score >= 55 ? "높음" : card.score >= 25 ? "중간" : "낮음")
-                                : (card.score >= 75 ? "안정" : card.score >= 45 ? "보통" : "주의 필요")
+                                ? (card.score >= 55 ? "\uB192\uC74C" : card.score >= 25 ? "\uC911\uAC04" : "\uB0AE\uC74C")
+                                : (card.score >= 75 ? "\uC548\uC815" : card.score >= 45 ? "\uBCF4\uD1B5" : "\uC8FC\uC758 \uD544\uC694")
                         };
                         const valueMarkup = card.valueLabel
                             ? `<p class="mt-3 text-4xl font-black text-slate-900">${card.valueLabel}</p>`
