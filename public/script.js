@@ -3386,7 +3386,7 @@ function drawBlendShapes(el, blendShapes) {
                         gaze_off_task_ratio: metrics.gazeTotalMs > 0
                             ? Number(((metrics.distractMs / metrics.gazeTotalMs) * 100).toFixed(2))
                             : 0,
-                        head_movement_variability: metrics.headMovementVariance ?? 0,
+                        ...buildHeadPosePayload(metrics),
                         final_risk_level: window.cptAnalytics?.finalRiskLevel ?? null,
                         report: window.cptAnalytics?.report ?? interpretation ?? null,
                         raw: window.cptAnalytics
@@ -5478,7 +5478,10 @@ function drawBlendShapes(el, blendShapes) {
         }
 
         async function generateReportFromCptResult() {
-            const payload = window.cptMetricsData || buildCptReportPayload();
+            const payload = {
+                ...(window.cptMetricsData || {}),
+                ...buildCptReportPayload()
+            };
             if (!payload) {
                 alert('CPT 데이터가 없습니다. 검사를 완료한 뒤 다시 시도해 주세요.');
                 return;
