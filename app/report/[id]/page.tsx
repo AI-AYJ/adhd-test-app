@@ -49,6 +49,7 @@ const toneClass: Record<MetricTone, string> = {
 
 const LOCAL_REVIEW_STORAGE_KEY = "fast-review-cache";
 const REVIEW_STARS = [1, 2, 3, 4, 5];
+const CPT_TOTAL_TRIALS = 20;
 
 function readStoredReviews() {
   if (typeof window === "undefined") return [];
@@ -101,11 +102,19 @@ function buildMetrics(report: ReportData): Metric[] {
     report.head_rotation_variability ?? report.head_movement_variability ?? 0;
   const headForwardRatio = report.head_pose_forward_ratio ?? 0;
   const headAdjustedAttention = report.head_attention_score_adjusted ?? 0;
+  const cptHitCount = report.cpt_attention ?? 0;
+  const cptOmitCount = report.inattention_count ?? 0;
+  const cptTargetCount = cptHitCount + cptOmitCount;
+  const cptNonTargetCount = Math.max(0, CPT_TOTAL_TRIALS - cptTargetCount);
 
   const inattentionRisk = clamp((report.inattention_count / 9) * 100);
   const hyperactivityRisk = clamp((report.hyperactivity_count / 9) * 100);
-  const omissionRisk = clamp(100 - (report.cpt_attention / 20) * 100);
-  const impulsivityRisk = clamp((report.cpt_impulsivity / 8) * 100);
+  const omissionRisk = cptTargetCount > 0
+    ? clamp((cptOmitCount / cptTargetCount) * 100)
+    : 0;
+  const impulsivityRisk = cptNonTargetCount > 0
+    ? clamp((report.cpt_impulsivity / cptNonTargetCount) * 100)
+    : 0;
   const gazeRisk = clamp(report.gaze_off_task_ratio);
   const movementRisk = clamp(
     Math.round(
@@ -132,15 +141,15 @@ function buildMetrics(report: ReportData): Metric[] {
     },
     {
       label: "주의 지속성",
-      value: `${report.cpt_attention}회`,
-      detail: "CPT에서 목표 자극에 정확히 반응한 정도를 보여줍니다.",
+      value: `누락 ${Math.round(omissionRisk)}%`,
+      detail: `CPT 목표 자극 ${cptTargetCount}회 중 ${cptOmitCount}회를 놓친 비율입니다.`,
       score: omissionRisk,
       tone: getTone(omissionRisk),
     },
     {
       label: "반응 조절",
-      value: `${report.cpt_impulsivity}회`,
-      detail: "반응하지 않아야 할 자극에 반응한 횟수입니다.",
+      value: `오경보 ${Math.round(impulsivityRisk)}%`,
+      detail: `CPT 비표적 자극 ${cptNonTargetCount}회 중 ${report.cpt_impulsivity}회 반응한 비율입니다.`,
       score: impulsivityRisk,
       tone: getTone(impulsivityRisk),
     },

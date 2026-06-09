@@ -954,15 +954,15 @@ function drawBlendShapes(el, blendShapes) {
         const CALIBRATION_PANEL_FALLBACK_HEIGHT = 320;
         const CALIBRATION_REVIEW_TRAIL_LIMIT = 80;
         const CALIBRATION_POINT_LAYOUT = [
-            { id: "top-left", x: 20, y: 12 },
-            { id: "top-center", x: 52, y: 10 },
-            { id: "top-right", x: 90, y: 12 },
-            { id: "middle-left", x: 6, y: 52 },
-            { id: "middle-right", x: 90, y: 52 },
-            { id: "bottom-left", x: 6, y: 92 },
-            { id: "bottom-center", x: 52, y: 84 },
-            { id: "bottom-right", x: 90, y: 92 },
-            { id: "center", x: 52, y: 52 }
+            { id: "top-left", x: 18, y: 20 },
+            { id: "top-center", x: 50, y: 12 },
+            { id: "top-right", x: 82, y: 20 },
+            { id: "middle-left", x: 10, y: 52 },
+            { id: "middle-right", x: 82, y: 52 },
+            { id: "bottom-left", x: 12, y: 84 },
+            { id: "bottom-center", x: 50, y: 80 },
+            { id: "bottom-right", x: 82, y: 84 },
+            { id: "center", x: 50, y: 52 }
         ];
         const CALIBRATION_OUTER_POINT_IDS = CALIBRATION_POINT_LAYOUT
             .filter((point) => point.id !== "center")
@@ -5525,7 +5525,8 @@ function drawBlendShapes(el, blendShapes) {
                 return;
             }
 
-            const resultActions = dom.cptDownloadRaw?.parentElement;
+            const resultActions = document.getElementById('result-report-actions')
+                || dom.cptRestartBtn?.parentElement;
             if (!resultActions) {
                 console.warn('CPT result action container not found');
                 return;
@@ -5535,7 +5536,7 @@ function drawBlendShapes(el, blendShapes) {
             btn.id = 'generateReportBtn';
             btn.type = 'button';
             btn.textContent = '리포트 생성';
-            btn.className = 'flex-1 rounded-full bg-blue-600 py-4 font-bold text-white shadow-[0_16px_30px_rgba(63,109,246,0.22)] transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50';
+            btn.className = 'flex-1 rounded-full bg-blue-600 px-8 py-5 text-base font-black text-white shadow-[0_18px_36px_rgba(63,109,246,0.24)] transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 md:text-lg';
             btn.addEventListener('click', generateReportFromCptResult);
 
             resultActions.appendChild(btn);

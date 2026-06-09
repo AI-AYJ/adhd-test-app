@@ -946,8 +946,8 @@ export default function Home() {
       <div id="calibrationStage" className="relative h-screen w-screen overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.10),_transparent_22%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(241,245,249,0.98)_100%)]">
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(15,23,42,0.04)_1px,transparent_1px),linear-gradient(180deg,rgba(15,23,42,0.04)_1px,transparent_1px)] bg-[size:84px_84px] opacity-40"></div>
 
-        <div className="pointer-events-none absolute left-6 top-6 z-10">
-          <div className="calibration-preview-shell relative h-56 w-[18rem] overflow-hidden rounded-[1.75rem] border border-emerald-400/35 bg-slate-900 shadow-[0_24px_80px_rgba(15,23,42,0.36)]">
+        <div className="pointer-events-none absolute left-5 top-5 z-[6]">
+          <div className="calibration-preview-shell relative h-24 w-36 overflow-hidden rounded-[1.15rem] border border-emerald-400/35 bg-slate-900 shadow-[0_18px_48px_rgba(15,23,42,0.24)] sm:h-28 sm:w-44">
             <video id="calibrationWebcamPreview" autoPlay playsInline muted />
           </div>
         </div>
@@ -955,15 +955,15 @@ export default function Home() {
         <button
           type="button"
           id="calibrationCloseBtn"
-          className="absolute right-6 top-6 z-20 rounded-full border border-slate-300 bg-white/88 px-5 py-3 text-sm font-black uppercase tracking-[0.24em] text-slate-700 shadow-[0_16px_40px_rgba(15,23,42,0.12)] transition hover:border-slate-900 hover:text-slate-900"
+          className="absolute right-6 top-6 z-30 rounded-full border border-slate-300 bg-white/88 px-5 py-3 text-sm font-black uppercase tracking-[0.24em] text-slate-700 shadow-[0_16px_40px_rgba(15,23,42,0.12)] transition hover:border-slate-900 hover:text-slate-900"
         >
           닫기
         </button>
 
-        <div id="calibrationPointsLayer" className="absolute inset-0 z-[5]"></div>
-        <div id="calibrationReviewLayer" className="pointer-events-none absolute inset-0 z-[4] hidden"></div>
+        <div id="calibrationPointsLayer" className="absolute inset-0 z-[15]"></div>
+        <div id="calibrationReviewLayer" className="pointer-events-none absolute inset-0 z-[9] hidden"></div>
 
-        <div id="calibrationIntroCard" className="absolute left-1/2 top-1/2 z-[12] w-[min(92vw,40rem)] -translate-x-1/2 -translate-y-1/2 rounded-[2rem] border border-slate-200 bg-white px-8 py-8 shadow-[0_36px_120px_rgba(15,23,42,0.22)] md:px-10 md:py-10">
+        <div id="calibrationIntroCard" className="absolute left-1/2 top-1/2 z-20 w-[min(92vw,40rem)] -translate-x-1/2 -translate-y-1/2 rounded-[2rem] border border-slate-200 bg-white px-8 py-8 shadow-[0_36px_120px_rgba(15,23,42,0.22)] md:px-10 md:py-10">
           <div className="inline-flex items-center gap-3 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.28em] text-amber-600">
             <span>WebGazer</span>
             <span className="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
@@ -1003,7 +1003,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div id="calibrationControlPanel" className="hidden absolute left-0 top-0 z-[11] w-[min(92vw,22rem)] rounded-[1.75rem] border border-white/75 bg-white/90 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur">
+        <div id="calibrationControlPanel" className="hidden absolute left-0 top-0 z-[12] w-[min(92vw,20rem)] rounded-[1.75rem] border border-white/75 bg-white/90 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur">
           <div id="calibrationControlDragHandle" className="mb-5 flex cursor-grab justify-center py-1 active:cursor-grabbing">
             <span className="h-1.5 w-16 rounded-full bg-slate-200"></span>
           </div>
@@ -1229,10 +1229,21 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mt-10 flex flex-col gap-4 md:flex-row">
-              <button type="button" id="cpt-restart-btn" className="flex-1 rounded-full border border-slate-200 bg-white py-4 font-bold text-slate-700 transition hover:border-blue-200 hover:text-blue-700">처음부터 다시 하기</button>
-              <button type="button" id="cpt-download-raw" className="flex-1 rounded-full bg-blue-600 py-4 font-bold text-white shadow-[0_16px_30px_rgba(63,109,246,0.22)] transition hover:bg-blue-700">Raw 데이터 Export (.json)</button>
-            </div>
+            <article className="fast-results-note mt-10 rounded-[2rem] border border-blue-100 bg-blue-50/70 p-7 text-left md:p-8">
+              <p className="text-xs font-black uppercase tracking-[0.3em] text-blue-600">
+                Detailed Report
+              </p>
+              <h3 className="mt-4 text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
+                상세한 해석은 리포트 생성 후 확인할 수 있어요
+              </h3>
+              <p className="mt-4 max-w-3xl text-base font-medium leading-8 text-slate-600 md:text-lg">
+                설문, CPT, 시선 이탈, 머리 자세 지표를 종합한 문장형 리포트는 리포트 생성을 눌러야 볼 수 있습니다.
+              </p>
+
+              <div id="result-report-actions" className="mt-7 flex flex-col gap-4 md:flex-row">
+                <button type="button" id="cpt-restart-btn" className="flex-1 rounded-full border border-blue-100 bg-white px-8 py-5 text-base font-black text-slate-700 shadow-[0_14px_30px_rgba(99,123,180,0.12)] transition hover:border-blue-200 hover:text-blue-700 md:text-lg">처음부터 다시 하기</button>
+              </div>
+            </article>
           </section>
         </div>
       </div>
