@@ -4607,25 +4607,25 @@ function drawBlendShapes(el, blendShapes) {
                 || analytics.cameraState === "unavailable";
             environmentCheckState.readyToProceed = canProceed;
             if (dom.environmentSummary) {
-                dom.environmentSummary.textContent = "아래 권고사항을 지켜주세요.";
+                dom.environmentSummary.textContent = "카메라 화면을 보며 조명, 얼굴 위치, 화면 환경을 확인해주세요.";
             }
             if (dom.environmentLightStatus) {
                 dom.environmentLightStatus.textContent = "조명을 밝게 맞춰주세요";
             }
             if (dom.environmentLightHint) {
-                dom.environmentLightHint.textContent = "얼굴이 어둡지 않게\n실내 조명을 밝혀주세요.";
+                dom.environmentLightHint.textContent = "얼굴이 어둡지 않게 실내 조명을 밝혀주세요.";
             }
             if (dom.environmentPositionStatus) {
                 dom.environmentPositionStatus.textContent = "얼굴을 중앙에 맞춰주세요";
             }
             if (dom.environmentPositionHint) {
-                dom.environmentPositionHint.textContent = "오른쪽 카메라 화면처럼\n얼굴 전체가 중앙 네모 안에\n들어오게 맞춰주세요.";
+                dom.environmentPositionHint.textContent = "오른쪽 카메라 화면처럼 얼굴 전체가 중앙 네모 안에 들어오게 맞춰주세요.";
             }
             if (dom.environmentSetupStatus) {
-                dom.environmentSetupStatus.textContent = "전체화면으로\n진행해주세요";
+                dom.environmentSetupStatus.textContent = "전체화면으로 진행해주세요";
             }
             if (dom.environmentSetupHint) {
-                dom.environmentSetupHint.textContent = "가능하면\n전체화면으로\n진행해주세요.";
+                dom.environmentSetupHint.textContent = "가능하면 전체화면으로 진행해주세요.";
             }
             if (dom.environmentContinueBtn) {
                 dom.environmentContinueBtn.disabled = !environmentCheckState.readyToProceed;

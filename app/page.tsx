@@ -324,7 +324,7 @@ export default function Home() {
   const [featuredReviews, setFeaturedReviews] = useState<PublicReview[]>([]);
 
   useEffect(() => {
-    const mainScriptVersion = "20260603-01";
+    const mainScriptVersion = "20260609-01";
 
     const loadMainScript = () => {
       const existingMain = document.getElementById("fast-main-script") as HTMLScriptElement | null;
@@ -836,10 +836,10 @@ export default function Home() {
     </main>
 
     <section id="environmentCheckOverlay" className="hidden fixed inset-0 z-[80] overflow-y-auto bg-slate-950/70 px-4 py-6 backdrop-blur-md" aria-hidden="true">
-      <div className="mx-auto flex min-h-full w-full max-w-6xl items-center justify-center">
+      <div className="mx-auto flex min-h-full w-full max-w-[92rem] items-center justify-center">
         <div className="w-full overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-[0_40px_140px_rgba(15,23,42,0.36)]">
-          <div className="grid gap-0 lg:grid-cols-[0.88fr_1.12fr]">
-            <div className="border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.12),_transparent_40%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-7 md:p-10 lg:border-b-0 lg:border-r">
+          <div className="grid gap-0 lg:grid-cols-[1.12fr_0.88fr]">
+            <div className="border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.12),_transparent_40%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-8 md:p-12 lg:border-b-0 lg:border-r">
               <div className="inline-flex items-center gap-3 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.28em] text-blue-700">
                 <span>FAST</span>
                 <span className="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
@@ -853,37 +853,37 @@ export default function Home() {
               </h2>
 
               <p id="environmentSummary" className="mt-6 max-w-xl text-base font-semibold leading-8 text-slate-600 md:text-lg">
-                아래 권고사항을 지켜주세요.
+                카메라 화면을 보며 조명, 얼굴 위치, 화면 환경을 확인해주세요.
               </p>
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <div id="environmentLightCard" className="rounded-[1.75rem] border border-amber-200 bg-amber-50 p-5">
+              <div className="mt-8 grid gap-5 md:grid-cols-3">
+                <div id="environmentLightCard" className="rounded-[1.75rem] border border-amber-200 bg-amber-50 p-6">
                   <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Lighting</p>
-                  <p id="environmentLightStatus" className="mt-3 whitespace-pre-line text-2xl font-black tracking-tight text-amber-600">
-                    조명을 밝게{"\n"}맞춰주세요
+                  <p id="environmentLightStatus" className="mt-3 text-xl font-black leading-tight tracking-tight text-amber-600 md:text-2xl">
+                    조명을 밝게 맞춰주세요
                   </p>
-                  <p id="environmentLightHint" className="mt-2 whitespace-pre-line text-sm font-medium leading-6 text-slate-500">
-                    얼굴이 어둡지 않게{"\n"}실내 조명을 밝혀주세요.
+                  <p id="environmentLightHint" className="mt-3 text-sm font-medium leading-6 text-slate-500">
+                    얼굴이 어둡지 않게 실내 조명을 밝혀주세요.
                   </p>
                 </div>
 
-                <div id="environmentPositionCard" className="rounded-[1.75rem] border border-amber-200 bg-amber-50 p-5">
+                <div id="environmentPositionCard" className="rounded-[1.75rem] border border-amber-200 bg-amber-50 p-6">
                   <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Position</p>
-                  <p id="environmentPositionStatus" className="mt-3 whitespace-pre-line text-2xl font-black tracking-tight text-amber-600">
-                    얼굴이 중앙에{"\n"}오게 맞춰주세요
+                  <p id="environmentPositionStatus" className="mt-3 text-xl font-black leading-tight tracking-tight text-amber-600 md:text-2xl">
+                    얼굴이 중앙에 오게 맞춰주세요
                   </p>
-                  <p id="environmentPositionHint" className="mt-2 whitespace-pre-line text-sm font-medium leading-6 text-slate-500">
-                    오른쪽 카메라 화면처럼{"\n"}얼굴 전체가 중앙 네모 안에{"\n"}들어오게 맞춰주세요.
+                  <p id="environmentPositionHint" className="mt-3 text-sm font-medium leading-6 text-slate-500">
+                    오른쪽 카메라 화면처럼 얼굴 전체가 중앙 네모 안에 들어오게 맞춰주세요.
                   </p>
                 </div>
 
-                <div id="environmentSetupCard" className="rounded-[1.75rem] border border-amber-200 bg-amber-50 p-5">
+                <div id="environmentSetupCard" className="rounded-[1.75rem] border border-amber-200 bg-amber-50 p-6">
                   <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Setup</p>
-                  <p id="environmentSetupStatus" className="mt-3 whitespace-pre-line text-2xl font-black tracking-tight text-amber-600">
-                    전체화면으로{"\n"}진행해주세요
+                  <p id="environmentSetupStatus" className="mt-3 text-xl font-black leading-tight tracking-tight text-amber-600 md:text-2xl">
+                    전체화면으로 진행해주세요
                   </p>
-                  <p id="environmentSetupHint" className="mt-2 whitespace-pre-line text-sm font-medium leading-6 text-slate-500">
-                    가능하면{"\n"}전체화면으로{"\n"}진행해주세요.
+                  <p id="environmentSetupHint" className="mt-3 text-sm font-medium leading-6 text-slate-500">
+                    가능하면 전체화면으로 진행해주세요.
                   </p>
                 </div>
               </div>
@@ -899,7 +899,7 @@ export default function Home() {
             </div>
 
             <div className="bg-slate-950 p-4 md:p-6">
-              <div className="environment-check-shell relative mx-auto flex min-h-[42rem] w-full max-w-[46rem] flex-col justify-between overflow-hidden rounded-[2rem] border border-emerald-400/40 bg-slate-900 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.36)] md:min-h-[46rem] md:p-6">
+              <div className="environment-check-shell relative mx-auto flex min-h-[42rem] w-full max-w-[50rem] flex-col justify-between overflow-hidden rounded-[2rem] border border-emerald-400/40 bg-slate-900 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.36)] md:min-h-[46rem] md:p-6">
                 <div className="environment-check-preview relative overflow-hidden rounded-[1.75rem] border border-white/10">
                   <video id="environmentWebcamPreview" autoPlay playsInline muted />
                   <canvas id="environmentGuideOverlay"></canvas>
@@ -917,9 +917,9 @@ export default function Home() {
                 </div>
 
                 <div className="rounded-[1.25rem] border border-white/12 bg-slate-950/72 px-4 py-4 text-center backdrop-blur md:px-5 md:py-5">
-                  <p className="text-[11px] font-black tracking-[0.18em] text-amber-300">권고사항</p>
+                  <p className="text-[11px] font-black tracking-[0.18em] text-amber-300">영상 저장 안내</p>
                   <p className="mt-2 text-sm font-semibold leading-6 text-white md:text-base">
-                    조명을 밝게 맞추고, 얼굴 전체를 중앙 네모 안에 맞추고, 가능하면 전체화면으로 진행해주세요. 권고사항을 지키지 않을 경우 결과 정확도가 낮아질 수 있습니다.
+                    카메라 영상은 저장, 녹화, 업로드되지 않습니다. 검사 중 화면 환경 확인과 시선/얼굴 지표 계산에만 사용됩니다.
                   </p>
                 </div>
               </div>
@@ -947,7 +947,7 @@ export default function Home() {
           닫기
         </button>
 
-        <div id="calibrationPointsLayer" className="absolute inset-0 z-[15]"></div>
+        <div id="calibrationPointsLayer" className="pointer-events-none absolute inset-0 z-[15]"></div>
         <div id="calibrationReviewLayer" className="pointer-events-none absolute inset-0 z-[9] hidden"></div>
 
         <div id="calibrationIntroCard" className="absolute left-1/2 top-1/2 z-20 w-[min(92vw,40rem)] -translate-x-1/2 -translate-y-1/2 rounded-[2rem] border border-slate-200 bg-white px-8 py-8 shadow-[0_36px_120px_rgba(15,23,42,0.22)] md:px-10 md:py-10">
@@ -990,7 +990,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div id="calibrationControlPanel" className="hidden absolute left-0 top-0 z-[12] w-[min(92vw,20rem)] rounded-[1.75rem] border border-white/75 bg-white/90 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur">
+        <div id="calibrationControlPanel" className="hidden absolute left-0 top-0 z-[25] w-[min(92vw,20rem)] rounded-[1.75rem] border border-white/75 bg-white/90 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur">
           <div id="calibrationControlDragHandle" className="mb-5 flex cursor-grab justify-center py-1 active:cursor-grabbing">
             <span className="h-1.5 w-16 rounded-full bg-slate-200"></span>
           </div>

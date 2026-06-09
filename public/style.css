@@ -339,7 +339,7 @@ button.is-disabled {
 }
 
 #calibrationPointsLayer {
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .calibration-point {
