@@ -106,6 +106,12 @@ function buildRagQuery(metrics: NormalizedReportMetrics) {
     `CPT 과잉행동 보조 지표: ${metrics.cpt_hyperactivity}`,
     `시선 이탈 비율: ${metrics.gaze_off_task_ratio}`,
     `머리 움직임 변동성: ${metrics.head_movement_variability}`,
+    `머리 회전 변동성: ${metrics.head_rotation_variability}`,
+    `정면 유지 비율: ${metrics.head_pose_forward_ratio}`,
+    `보정 집중도: ${metrics.head_attention_score_adjusted}`,
+    `좌측 회전 비율: ${metrics.head_pose_left_ratio}`,
+    `우측 회전 비율: ${metrics.head_pose_right_ratio}`,
+    `하방 회전 비율: ${metrics.head_pose_down_ratio}`,
     `시스템 1차 참고 위험도: ${metrics.final_risk_level}`,
   ].join("\n");
 }
@@ -152,7 +158,14 @@ ${retrievedContext || "없음"}
 주의:
 - 입력에 없는 값은 만들지 마세요.
 - RAG 참고 문맥이 있으면 우선 반영하되, 진단처럼 표현하지 마세요.
-- 모든 문단은 <p>...</p> HTML 형식으로 작성하세요.`;
+- 모든 문단은 <p>...</p> HTML 형식으로 작성하세요.
+- 사용자를 ADHD로 진단하지 말고, 선별검사 결과와 가능성 중심으로 설명하세요.
+- 머리 회전 변동성은 과제 중 자세 변화의 일관성을 보여주는 보조 지표로 설명하세요.
+- 정면 유지 비율이 낮거나 보정 집중도가 낮으면 과제 중 주의가 흔들렸을 가능성을 부드럽게 설명하세요.
+- head_rotation_variability가 12 이상이거나, head_pose_forward_ratio가 80 미만이거나, head_attention_score_adjusted가 65 미만이면 머리 자세 기반 집중 상태를 안정적이거나 높은 수준이라고 표현하지 마세요.
+- 위 조건에 해당하면 머리 방향 변화가 잦았고 과제 몰입이 흔들렸을 가능성을 명시하세요.
+- 문장은 차분하고 불안감을 과도하게 주지 않는 톤으로 작성하세요.
+- 마지막 문단에는 이 결과가 진단이 아니라 선별검사 결과이며, 필요 시 전문의 상담이 필요하다는 점을 포함하세요.`;
 }
 
 function extractTextFromLLMResponse(data: GeminiResponse) {

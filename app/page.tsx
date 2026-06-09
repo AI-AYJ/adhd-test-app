@@ -17,247 +17,204 @@ type SurveyControls = {
   syncAnswersFromDom?: () => void;
 };
 
-function FASTLogoMark() {
+const reasonCards = [
+  {
+    title: "자꾸 잊어버려요",
+    description: "약속, 준비물, 마감일이 머릿속에서 자주 사라지는 느낌이 들 때가 있습니다.",
+  },
+  {
+    title: "집중이 쉽게 흐트러져요",
+    description: "해야 할 일은 알지만 소리, 생각, 주변 자극에 금방 끌려가기도 합니다.",
+  },
+  {
+    title: "시작이 자꾸 늦어져요",
+    description: "미루고 싶은 마음이 커져서 마지막 순간에야 움직이는 패턴이 반복됩니다.",
+  },
+];
+
+const featureHighlights = [
+  {
+    label: "FAST 장점",
+    value: "5분",
+    title: "짧은 시간 안에 초기 신호를 확인합니다",
+    description: "긴 검사처럼 부담스럽지 않게 설문과 CPT를 이어서 진행합니다.",
+  },
+  {
+    label: "진행 방식",
+    value: "2단계",
+    title: "설문 응답과 CPT 수행을 함께 봅니다",
+    description: "문항 답변만이 아니라 과제를 수행하는 흐름까지 참고합니다.",
+  },
+  {
+    label: "결과 제공",
+    value: "RAW",
+    title: "분석 가능한 결과 데이터를 제공합니다",
+    description: "설문, 시선, CPT 데이터를 바탕으로 결과 요약을 확인할 수 있습니다.",
+  },
+];
+
+const heroFactCards = [
+  {
+    title: "약 5분 소요",
+    description: "부담을 낮추고 핵심만 차분하게 확인합니다.",
+  },
+  {
+    title: "DSM-5 기반 문항",
+    description: "ADHD 주요 경향을 묻는 문항으로 구성했습니다.",
+  },
+  {
+    title: "설문 + CPT 통합",
+    description: "응답과 과제 수행 흐름을 함께 참고합니다.",
+  },
+];
+
+const processSteps = [
+  {
+    step: "01",
+    title: "환경 점검",
+    description: "조명, 카메라, 화면 위치를 먼저 확인해 데이터 품질을 맞춥니다.",
+  },
+  {
+    step: "02",
+    title: "설문 응답",
+    description: "부주의와 과잉행동·충동성 문항에 차분히 답변합니다.",
+  },
+  {
+    step: "03",
+    title: "CPT 수행",
+    description: "짧은 과제를 진행하며 반응과 집중 유지 흐름을 기록합니다.",
+  },
+  {
+    step: "04",
+    title: "결과 요약",
+    description: "설문, 시선, CPT 데이터를 함께 정리해 현재 경향을 보여줍니다.",
+  },
+];
+
+const faqItems = [
+  {
+    question: "FAST는 진단서인가요?",
+    answer: "아닙니다. FAST는 ADHD 경향을 빠르게 살펴보는 초기 스크리닝 도구이며, 의학적 진단을 대신하지 않습니다.",
+  },
+  {
+    question: "카메라와 시선 데이터는 왜 사용하나요?",
+    answer: "설문 중 집중 흐름과 CPT 수행 패턴을 함께 참고하기 위해 사용합니다. 결과 해석은 응답 데이터와 행동 지표를 함께 봅니다.",
+  },
+  {
+    question: "결과가 높게 나오면 어떻게 해야 하나요?",
+    answer: "일상 기능 저하가 크거나 어려움이 지속된다면 정신건강의학과 또는 전문 상담 기관의 평가를 권장합니다.",
+  },
+  {
+    question: "검사는 얼마나 걸리나요?",
+    answer: "설문과 CPT를 포함해 약 5분 안에 마치는 흐름을 목표로 설계했습니다.",
+  },
+];
+
+function HeroBackdropScene() {
   return (
-    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-200 bg-[linear-gradient(135deg,#eff6ff_0%,#dbeafe_100%)] shadow-[0_10px_24px_rgba(59,130,246,0.16)]">
-      <div className="relative h-6 w-6">
-        <span className="absolute left-0 top-0 h-3 w-3 rounded-sm bg-slate-950"></span>
-        <span className="absolute right-0 top-0 h-3 w-3 rounded-sm bg-blue-500"></span>
-        <span className="absolute left-0 bottom-0 h-3 w-3 rounded-sm bg-cyan-400"></span>
-        <span className="absolute right-0 bottom-0 h-3 w-3 rounded-sm bg-slate-200"></span>
+    <div className="fast-hero-scene" aria-hidden="true">
+      <div className="fast-hero-illustration">
+        <div className="fast-hero-blob"></div>
+        <div className="fast-hero-foliage fast-hero-foliage-left">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div className="fast-hero-foliage fast-hero-foliage-right">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div className="fast-hero-sprout fast-hero-sprout-left">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div className="fast-hero-sprout fast-hero-sprout-right">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div className="fast-hero-leaf fast-hero-leaf-left"></div>
+        <div className="fast-hero-leaf fast-hero-leaf-right"></div>
+        <div className="fast-hero-person fast-hero-person-pink">
+          <span className="fast-hero-head"></span>
+          <span className="fast-hero-body"></span>
+          <span className="fast-hero-thought fast-hero-thought-ring"></span>
+        </div>
+        <div className="fast-hero-person fast-hero-person-plum">
+          <span className="fast-hero-head"></span>
+          <span className="fast-hero-body"></span>
+          <span className="fast-hero-thought fast-hero-thought-line"></span>
+        </div>
+        <div className="fast-hero-person fast-hero-person-green">
+          <span className="fast-hero-head"></span>
+          <span className="fast-hero-body"></span>
+          <span className="fast-hero-thought fast-hero-thought-dots">
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+          </span>
+        </div>
+        <div className="fast-hero-person fast-hero-person-amber">
+          <span className="fast-hero-head"></span>
+          <span className="fast-hero-body"></span>
+          <span className="fast-hero-thought fast-hero-thought-spark">
+            <i></i>
+            <i></i>
+            <i></i>
+          </span>
+        </div>
+        <div className="fast-hero-person fast-hero-person-blue">
+          <span className="fast-hero-head"></span>
+          <span className="fast-hero-body"></span>
+          <span className="fast-hero-thought fast-hero-thought-grid">
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+          </span>
+        </div>
       </div>
+      <div className="fast-hero-wave"></div>
     </div>
   );
 }
 
-function HeroScreeningIllustration() {
+function HeroFactCards() {
   return (
-    <div className="landing-float relative mx-auto h-[26rem] w-full max-w-[34rem]" style={{ animationDelay: "0.4s" }}>
-      <div className="absolute left-6 top-8 h-28 w-28 rounded-full bg-cyan-100/80"></div>
-      <div className="absolute right-6 top-0 h-24 w-24 rounded-full bg-blue-100/80"></div>
-      <div className="absolute bottom-2 left-16 right-10 top-20 rounded-[2.5rem] bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.10),_transparent_50%),linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)]"></div>
-
-      <div className="absolute right-2 top-16 w-40 rounded-[1.5rem] border border-cyan-200 bg-white/95 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.10)]">
-        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-600">Risk Check</p>
-        <div className="mt-3 flex items-end gap-2">
-          <span className="h-8 w-4 rounded-t-md bg-blue-200"></span>
-          <span className="h-12 w-4 rounded-t-md bg-cyan-300"></span>
-          <span className="h-16 w-4 rounded-t-md bg-slate-900"></span>
+    <div className="fast-hero-facts">
+      {heroFactCards.map((card) => (
+        <div key={card.title} className="fast-hero-fact">
+          <p className="text-lg font-black tracking-tight text-slate-900">{card.title}</p>
+          <p className="mt-2 text-sm font-medium leading-7 text-slate-500">{card.description}</p>
         </div>
-        <p className="mt-3 text-sm font-bold text-slate-500">위험도 분류</p>
-      </div>
-
-      <div className="absolute bottom-6 left-20 right-6 rotate-[-11deg] rounded-[2.25rem] border border-slate-300 bg-[#dfe7f3] p-4 shadow-[0_30px_80px_rgba(15,23,42,0.18)]">
-        <div className="rounded-[1.9rem] border border-slate-800 bg-[linear-gradient(180deg,#1e293b_0%,#0f172a_100%)] p-3">
-          <div className="rounded-[1.4rem] bg-[linear-gradient(180deg,#f6fbff_0%,#ffffff_100%)] p-4">
-            <div className="flex items-center justify-between">
-              <div className="h-2 w-16 rounded-full bg-slate-200"></div>
-              <div className="flex gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-300"></span>
-                <span className="h-2.5 w-2.5 rounded-full bg-rose-400"></span>
-              </div>
-            </div>
-            <div className="mt-5 grid grid-cols-2 gap-2">
-              <div className="rounded-[1rem] bg-slate-950 px-3 py-3 text-center text-xs font-black uppercase tracking-[0.16em] text-white">Survey</div>
-              <div className="rounded-[1rem] bg-violet-50 px-3 py-3 text-center text-xs font-black uppercase tracking-[0.16em] text-slate-900">CPT</div>
-            </div>
-            <div className="mt-5 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
-              <div className="mx-auto h-3 w-32 rounded-full bg-slate-200"></div>
-              <div className="relative mt-5 h-28 rounded-[1.5rem] bg-white">
-                <div className="absolute left-1/2 top-1/2 h-16 w-36 -translate-x-1/2 -translate-y-1/2 rounded-[1.5rem] border-2 border-cyan-300 bg-cyan-50/70"></div>
-                <span className="absolute left-[43%] top-[42%] h-3 w-3 rounded-full bg-cyan-400"></span>
-                <span className="absolute left-[49%] top-[49%] h-3 w-3 rounded-full bg-cyan-500"></span>
-                <span className="absolute left-[54%] top-[56%] h-3 w-3 rounded-full bg-cyan-400"></span>
-                <span className="absolute left-[52%] top-[61%] h-3.5 w-3.5 rounded-full bg-rose-500"></span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="mx-auto mt-4 h-3 w-32 rounded-full bg-slate-400/60"></div>
-      </div>
+      ))}
     </div>
   );
 }
 
-function BenefitCaptureIllustration() {
-  const points = [
-    { left: "48%", top: "47%" },
-    { left: "51%", top: "51%" },
-    { left: "54%", top: "55%" },
-    { left: "57%", top: "49%" },
-    { left: "46%", top: "56%" },
-    { left: "52%", top: "60%" },
-    { left: "59%", top: "58%" },
-    { left: "43%", top: "52%" }
-  ];
-
+function ProcessTimeline() {
   return (
-    <div className="landing-float relative mx-auto h-72 w-full max-w-[25rem]">
-      <div className="absolute left-3 top-10 h-24 w-24 rounded-full bg-cyan-100/90"></div>
-      <div className="absolute right-2 top-2 h-28 w-28 rounded-full bg-blue-100/80"></div>
-      <div className="absolute inset-x-8 bottom-2 top-8 rounded-[2.25rem] border border-slate-200 bg-white/90 shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
-        <div className="absolute left-6 top-6 h-40 w-36 rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] p-4">
-          <div className="h-3 rounded-full bg-blue-100"></div>
-          <div className="mt-4 h-2 rounded-full bg-slate-100"></div>
-          <div className="mt-3 h-2 w-5/6 rounded-full bg-slate-100"></div>
-          <div className="mt-3 h-2 w-4/6 rounded-full bg-slate-100"></div>
-          <div className="mt-5 flex items-center gap-2">
-            <span className="h-5 w-5 rounded-full bg-emerald-500/80"></span>
-            <span className="h-5 w-5 rounded-full bg-blue-500/80"></span>
-            <span className="h-5 w-5 rounded-full bg-violet-500/70"></span>
-          </div>
-        </div>
-
-        <div className="absolute right-6 top-8 h-36 w-36 rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f5fbff_100%)] p-4">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[1.25rem] bg-slate-950 text-2xl text-white">+</div>
-          <div className="mt-4 rounded-[1rem] bg-cyan-50 p-3">
-            <div className="mx-auto h-10 w-20 rounded-[1rem] border-2 border-cyan-300"></div>
-          </div>
-        </div>
-
-        <div className="absolute left-1/2 top-[56%] h-24 w-28 -translate-x-1/2 -translate-y-1/2 rounded-[1.5rem] border-2 border-cyan-300 bg-cyan-50/70"></div>
-        {points.map((point, index) => (
-          <span
-            key={`${point.left}-${point.top}`}
-            className={`absolute h-3 w-3 rounded-full ${index === points.length - 1 ? "bg-rose-500" : "bg-cyan-400/80"}`}
-            style={{ left: point.left, top: point.top }}
-          ></span>
+    <div className="fast-process-timeline rounded-[2.25rem] p-5 md:p-6">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {processSteps.map((item, index) => (
+          <article key={item.step} className="fast-process-card rounded-[1.75rem] p-6">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-sm font-black text-slate-400">{item.step}</p>
+              <div
+                className={`h-1.5 flex-1 rounded-full ${
+                  index === 0 ? "bg-blue-200" : index === 1 ? "bg-cyan-200" : index === 2 ? "bg-violet-200" : "bg-slate-200"
+                }`}
+              ></div>
+            </div>
+            <h3 className="mt-5 text-2xl font-black tracking-tight text-slate-900">{item.title}</h3>
+            <p className="mt-3 text-base font-medium leading-8 text-slate-500">{item.description}</p>
+          </article>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function BenefitEvidenceIllustration() {
-  return (
-    <div className="landing-float relative mx-auto h-72 w-full max-w-[25rem]" style={{ animationDelay: "0.8s" }}>
-      <div className="absolute left-0 top-6 h-28 w-28 rounded-full bg-blue-100/70"></div>
-      <div className="absolute right-4 top-10 h-24 w-24 rounded-full bg-emerald-100/80"></div>
-      <div className="absolute inset-x-10 bottom-4 top-6 rounded-[2.25rem] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
-        <div className="absolute left-6 right-6 top-6 rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] p-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-[1rem] bg-slate-50 p-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Task AOI</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">76</p>
-            </div>
-            <div className="rounded-[1rem] bg-slate-50 p-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">CPT</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">84</p>
-            </div>
-          </div>
-          <div className="mt-4 flex items-end gap-2">
-            <span className="h-12 w-8 rounded-t-xl bg-blue-200"></span>
-            <span className="h-16 w-8 rounded-t-xl bg-cyan-300"></span>
-            <span className="h-10 w-8 rounded-t-xl bg-slate-200"></span>
-            <span className="h-20 w-8 rounded-t-xl bg-slate-900"></span>
-          </div>
-        </div>
-
-        <div className="absolute bottom-6 left-6 right-6 grid grid-cols-[1fr_auto] gap-4">
-          <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-            <div className="h-2 rounded-full bg-slate-200"></div>
-            <div className="mt-3 h-2 w-5/6 rounded-full bg-slate-200"></div>
-            <div className="mt-3 h-2 w-4/6 rounded-full bg-slate-200"></div>
-          </div>
-          <div className="flex h-24 w-24 items-center justify-center rounded-[1.5rem] bg-[linear-gradient(180deg,#0f172a_0%,#1e3a8a_100%)] text-white shadow-[0_16px_30px_rgba(15,23,42,0.18)]">
-            <div className="text-center">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-100">Admin</p>
-              <p className="mt-1 text-2xl font-black">✓</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function WorkflowIllustration() {
-  const surveyLabels = ["0", "1", "2", "3", "4"];
-
-  return (
-    <div className="relative overflow-hidden rounded-[2.25rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f6fbff_100%)] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-      <div className="absolute left-10 top-10 h-28 w-28 rounded-full bg-blue-100/70"></div>
-      <div className="absolute right-12 top-12 h-24 w-24 rounded-full bg-cyan-100/80"></div>
-      <div className="absolute bottom-8 left-1/2 h-28 w-28 -translate-x-1/2 rounded-full bg-indigo-100/70"></div>
-
-      <div className="relative grid gap-5 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
-        <div className="rounded-[1.8rem] border border-slate-200 bg-white/95 p-5 shadow-[0_20px_50px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">Survey</p>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">문항 응답</p>
-          </div>
-          <div className="mt-4 rounded-[1.75rem] border border-slate-200 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_42%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-4">
-            <div className="mx-auto h-2.5 w-28 rounded-full bg-slate-200"></div>
-            <div className="mx-auto mt-5 flex min-h-[13.5rem] max-w-[24rem] flex-col items-center justify-between rounded-[1.6rem] px-4 py-4 text-center">
-              <p className="text-base font-bold leading-snug tracking-tight text-slate-800 md:text-lg">
-                <span className="mr-1 font-black italic text-blue-600/40">Q8.</span>
-                해야 할 일을 자주 잊어버리나요?
-              </p>
-              <div className="grid w-full grid-cols-5 gap-2">
-                {surveyLabels.map((label, index) => (
-                  <div key={label} className="flex flex-col items-center">
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border-[3px] text-sm font-black ${
-                        index === 3
-                          ? "border-blue-500 bg-blue-500 text-white shadow-[0_8px_20px_rgba(59,130,246,0.25)]"
-                          : "border-slate-100 bg-white text-slate-300"
-                      }`}
-                    >
-                      {label}
-                    </div>
-                    <span className="mt-2 text-[9px] font-black uppercase tracking-[0.12em] text-slate-300">
-                      {index === 0 ? "Low" : index === 4 ? "High" : "Rate"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="hidden lg:flex flex-col items-center gap-3 text-slate-300">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-lg font-black text-slate-500 shadow-[0_12px_24px_rgba(15,23,42,0.05)]">
-            →
-          </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Continue</p>
-        </div>
-
-        <div className="rounded-[1.8rem] border border-slate-200 bg-white/95 p-5 shadow-[0_20px_50px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-indigo-600">CPT</p>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">주의력 과제</p>
-          </div>
-          <div className="mt-4 rounded-[1.75rem] border border-slate-200 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_42%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-4">
-            <div className="mx-auto h-2.5 w-28 rounded-full bg-slate-200"></div>
-            <div className="relative mt-5 flex min-h-[13.5rem] items-center justify-center overflow-hidden rounded-[1.6rem] bg-white">
-              <div className="absolute left-[14%] top-[18%] flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-[0_8px_18px_rgba(15,23,42,0.08)] text-lg">🎭</div>
-              <div className="absolute right-[16%] top-[20%] flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-[0_8px_18px_rgba(15,23,42,0.08)] text-lg">🚗</div>
-              <div className="absolute left-[18%] bottom-[16%] flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-[0_8px_18px_rgba(15,23,42,0.08)] text-lg">🐚</div>
-              <div className="absolute right-[14%] bottom-[14%] flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-[0_8px_18px_rgba(15,23,42,0.08)] text-lg">🍷</div>
-              <div className="flex h-36 w-28 items-center justify-center rounded-[1.5rem] border border-slate-300 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] shadow-[0_18px_36px_rgba(15,23,42,0.12)]">
-                <div className="relative h-full w-full text-rose-600">
-                  <div className="absolute left-3 top-3 flex flex-col items-center leading-none">
-                    <span className="text-lg font-black">3</span>
-                    <span className="text-sm">♥</span>
-                  </div>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-2xl">
-                    <div>♥</div>
-                    <div>♥</div>
-                    <div>♥</div>
-                  </div>
-                  <div className="absolute bottom-3 right-3 flex rotate-180 flex-col items-center leading-none">
-                    <span className="text-lg font-black">3</span>
-                    <span className="text-sm">♥</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <p className="mt-4 text-center text-[11px] font-black uppercase tracking-[0.26em] text-slate-400">
-              빨간 하트 3개 카드면 Space
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -445,8 +402,8 @@ export default function Home() {
   return (
     <>
     <div id="surveyExperience">
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
+    <nav className="fast-site-nav sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+        <div className="fast-site-nav-inner h-20 flex items-center justify-between">
             <div className="flex items-center gap-4">
               {surveyStarted ? (
                 <>
@@ -455,8 +412,7 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <FASTLogoMark />
-                  <div>
+                  <div className="fast-site-brand">
                       <p className="text-2xl font-black tracking-[-0.08em] text-slate-950">FAST</p>
                       <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Focus Allocation Screening Test</p>
                   </div>
@@ -490,77 +446,132 @@ export default function Home() {
     <main className="max-w-6xl mx-auto px-6 py-10 md:py-14">
         {!surveyStarted ? (
         <>
-        <section className="relative overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-[0_32px_120px_rgba(15,23,42,0.10)]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.14),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]"></div>
-            <div className="relative grid gap-10 px-8 py-10 md:px-12 md:py-14 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
-                <div className="max-w-[38rem] lg:max-w-none">
+        <section className="fast-hero-section relative overflow-hidden">
+            <HeroBackdropScene />
+            <div className="relative z-10 px-8 pb-10 pt-10 md:px-12 md:pb-12 md:pt-14 lg:px-16 lg:pb-14">
+                <div className="fast-hero-copy max-w-[54rem]">
                     <div className="inline-flex items-center gap-3 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.32em] text-blue-700">
                         <span>FAST</span>
                         <span className="h-1 w-1 rounded-full bg-blue-400"></span>
                         <span>Home ADHD Screening</span>
                     </div>
-                    <h1 className="mt-6 text-5xl font-black leading-[0.96] tracking-[-0.06em] text-slate-950 md:text-6xl">
-                        <span className="whitespace-nowrap">ADHD 초기</span>
-                        <br />
-                        <span className="whitespace-nowrap">스크리닝 도구</span>
+                    <h1 className="fast-hero-title fast-nowrap-desktop mt-6 text-[clamp(2.4rem,5.8vw,5.4rem)] font-black leading-[1.02] tracking-tight text-slate-950">
+                        ADHD 초기 스크리닝 도구
                     </h1>
-                    <p className="mt-6 max-w-[34rem] text-2xl font-black leading-[1.18] tracking-tight text-slate-900 md:text-3xl">
-                        <span className="whitespace-nowrap">집에서 가볍게</span>
-                        <br />
-                        <span className="whitespace-nowrap">ADHD 위험도를 확인해보세요</span>
+                    <p className="fast-nowrap-desktop mt-6 max-w-none text-3xl font-black leading-tight tracking-tight text-slate-900 md:text-4xl">
+                        마음이 자꾸 흩어질 때, 부담 없이 확인해요
                     </p>
-                    <p className="mt-6 max-w-[44rem] text-base font-semibold leading-8 text-slate-500 md:text-[1.05rem] md:leading-8 lg:whitespace-nowrap">
-                        FAST는 집에서 진행할 수 있는 ADHD 초기 스크리닝 웹입니다.
+                    <p className="fast-nowrap-desktop mt-6 max-w-none text-base font-semibold leading-8 text-slate-500 md:text-lg md:leading-9">
+                        설문과 짧은 집중 과제를 통해 부주의, 충동성, 과잉행동 경향을 부담 없이 살펴보는 FAST 데모입니다.
                     </p>
-                </div>
-
-                <div className="relative">
-                    <HeroScreeningIllustration />
+                    <div className="mt-8 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={handleStartScreening}
+                        className="rounded-full bg-blue-600 px-7 py-4 text-sm font-black text-white shadow-[0_18px_34px_rgba(63,109,246,0.24)] transition-all hover:scale-[1.02]"
+                      >
+                        지금 검사해보기
+                      </button>
+                      <a
+                        href="#fast-flow"
+                        className="rounded-full border border-slate-200 bg-white/85 px-7 py-4 text-sm font-black text-slate-700 shadow-[0_14px_30px_rgba(92,108,145,0.10)] transition-all hover:bg-white"
+                      >
+                        흐름 먼저 보기
+                      </a>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <section className="mt-10 grid gap-8 lg:grid-cols-2">
-            <article
-              data-landing-reveal
-              className="landing-reveal rounded-[2.5rem] border border-slate-200 bg-white px-8 py-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)]"
-              style={{ transitionDelay: "60ms" }}
-            >
-                <BenefitCaptureIllustration />
-                <div className="mt-6 text-center">
-                    <p className="text-[11px] font-black uppercase tracking-[0.28em] text-cyan-600">FAST 장점</p>
-                    <h3 className="mt-3 text-[clamp(1rem,1.5vw,1.82rem)] font-black leading-[1.12] tracking-[-0.03em] text-slate-900 whitespace-nowrap">
-                        약 5분 안에 ADHD 위험도를 분류합니다
-                    </h3>
-                    <p className="mt-4 text-base font-medium leading-8 text-slate-500">
-                        설문과 CPT를 합쳐 약 5분이면 초기 위험 신호를
-                        <br />
-                        빠르게 확인할 수 있습니다.
-                    </p>
-                </div>
-            </article>
+        <HeroFactCards />
 
-            <article
-              data-landing-reveal
-              className="landing-reveal rounded-[2.5rem] border border-slate-200 bg-white px-8 py-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)]"
-              style={{ transitionDelay: "160ms" }}
-            >
-                <BenefitEvidenceIllustration />
-                <div className="mt-6 text-center">
-                    <p className="text-[11px] font-black uppercase tracking-[0.28em] text-blue-600">결과 분석 제공</p>
-                    <h3 className="mt-3 text-[clamp(1rem,1.5vw,1.82rem)] font-black leading-[1.12] tracking-[-0.03em] text-slate-900 whitespace-nowrap">
-                        RAW 데이터와 분석 결과를 제공합니다
-                    </h3>
-                    <p className="mt-4 text-base font-medium leading-8 text-slate-500">
-                        설문, 시선, CPT 데이터를 RAW로 제공하고
-                        <br />
-                        LLM이 이를 바탕으로 결과를 분석합니다.
-                    </p>
+        <section
+          id="fast-reasons"
+          data-landing-reveal
+          className="landing-reveal fast-reason-section mt-10"
+          style={{ transitionDelay: "40ms" }}
+        >
+            <div className="mx-auto max-w-5xl">
+                <p className="text-[11px] font-black tracking-[0.18em] text-blue-600">검사를 받아야 하는 이유</p>
+                <h2 className="fast-nowrap-desktop mt-4 max-w-none text-4xl font-black leading-tight tracking-tight text-slate-950 md:text-5xl">
+                    단순히 의지가 약해서가 아닐 수 있어요.
+                </h2>
+                <p className="fast-nowrap-desktop mt-6 max-w-none text-base font-medium leading-8 text-slate-500 md:text-lg">
+                    반복되는 잊어버림, 산만함, 미루기는 주의 조절 방식과 연결될 수 있습니다. FAST는 현재 패턴을 먼저 편하게 살펴보는 시작점입니다.
+                </p>
+
+                <div className="mt-10 grid gap-5 md:grid-cols-3">
+                    {reasonCards.map((card, index) => (
+                      <article key={card.title} className="fast-reason-card rounded-[2rem] bg-white p-7 shadow-[0_18px_48px_rgba(95,133,242,0.10)]">
+                        <div
+                          className={`h-1.5 w-16 rounded-full ${
+                            index === 0 ? "bg-blue-500" : index === 1 ? "bg-cyan-400" : "bg-violet-500"
+                          }`}
+                        ></div>
+                        <h3 className="mt-6 text-2xl font-black tracking-tight text-slate-900">
+                          {card.title}
+                        </h3>
+                        <p className="mt-5 text-base font-medium leading-8 text-slate-500">
+                          {card.description}
+                        </p>
+                      </article>
+                    ))}
                 </div>
-            </article>
+            </div>
         </section>
 
         <section
+          id="fast-summary"
+          data-landing-reveal
+          className="landing-reveal fast-highlight-section mt-10"
+          style={{ transitionDelay: "80ms" }}
+        >
+            <div className="grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
+                <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.28em] text-cyan-600">FAST Summary</p>
+                    <h2 className="fast-nowrap-desktop mt-4 text-4xl font-black leading-tight tracking-tight text-slate-950 md:text-5xl">
+                        검사는 짧게, 결과는 해석하기 쉽게.
+                    </h2>
+                    <p className="fast-nowrap-desktop mt-5 text-base font-medium leading-8 text-slate-500 md:text-lg">
+                        검사 전 부담을 줄이고, 어떤 흐름으로 결과가 만들어지는지 한 화면에서 이해할 수 있게 정리했습니다.
+                    </p>
+                    <div className="mt-8 grid grid-cols-3 gap-3">
+                        <div className="fast-mini-stat rounded-[1.5rem] px-4 py-5 text-center">
+                            <p className="text-2xl font-black text-blue-600">5분</p>
+                            <p className="mt-2 text-xs font-bold text-slate-500">예상 소요</p>
+                        </div>
+                        <div className="fast-mini-stat rounded-[1.5rem] px-4 py-5 text-center">
+                            <p className="text-2xl font-black text-blue-600">2단계</p>
+                            <p className="mt-2 text-xs font-bold text-slate-500">설문 + CPT</p>
+                        </div>
+                        <div className="fast-mini-stat rounded-[1.5rem] px-4 py-5 text-center">
+                            <p className="text-2xl font-black text-blue-600">RAW</p>
+                            <p className="mt-2 text-xs font-bold text-slate-500">데이터 제공</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid gap-4">
+                    {featureHighlights.map((feature) => (
+                      <article key={feature.title} className="fast-feature-card grid gap-5 rounded-[2rem] bg-white p-6 shadow-[0_18px_48px_rgba(95,133,242,0.10)] sm:grid-cols-[6.5rem_1fr] sm:items-start">
+                        <div className="rounded-[1.4rem] bg-blue-50 px-4 py-5 text-center">
+                          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-600">{feature.label}</p>
+                          <p className="mt-3 text-2xl font-black text-slate-900">{feature.value}</p>
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-black tracking-tight text-slate-900">{feature.title}</h3>
+                          <p className="mt-3 text-base font-medium leading-8 text-slate-500">
+                            {feature.description}
+                          </p>
+                        </div>
+                      </article>
+                    ))}
+                </div>
+            </div>
+        </section>
+
+        <section
+          id="fast-flow"
           data-landing-reveal
           className="landing-reveal mt-10 rounded-[2.75rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-8 py-10 shadow-[0_28px_100px_rgba(15,23,42,0.08)] md:px-10 md:py-12"
           style={{ transitionDelay: "80ms" }}
@@ -573,14 +584,14 @@ export default function Home() {
                     </p>
                 </div>
                 <p className="mt-6 text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">작동 방식</p>
-                <h3 className="mt-4 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">FAST는 이렇게 진행됩니다</h3>
-                <p className="mt-4 text-base font-medium leading-8 text-slate-500">
+                <h3 className="fast-nowrap-desktop mt-4 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">FAST는 이렇게 진행됩니다</h3>
+                <p className="fast-nowrap-desktop mt-4 text-base font-medium leading-8 text-slate-500">
                     설문, CPT를 순서대로 거쳐 결과를 도출합니다.
                 </p>
             </div>
 
             <div className="mt-8">
-                <WorkflowIllustration />
+                <ProcessTimeline />
             </div>
 
             <div className="mt-8 grid gap-4 md:grid-cols-2">
@@ -597,6 +608,37 @@ export default function Home() {
                     <p className="mt-3 text-base font-medium leading-8 text-slate-500">
                         CPT와 함께 수집한 지표를 결과로 보여줍니다.
                     </p>
+                </div>
+            </div>
+        </section>
+
+        <section
+          data-landing-reveal
+          className="landing-reveal mt-14 px-1 pb-8"
+          style={{ transitionDelay: "160ms" }}
+        >
+            <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+                <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-rose-500">FAQ</p>
+                    <h3 className="mt-4 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">
+                        검사 전에 궁금한 점
+                    </h3>
+                    <p className="fast-nowrap-desktop mt-4 text-base font-medium leading-8 text-slate-500">
+                        FAST는 진단이 아니라 현재의 경향을 확인하는 참고용 스크리닝입니다.
+                    </p>
+                </div>
+
+                <div className="space-y-4">
+                    {faqItems.map((item) => (
+                      <details key={item.question} className="rounded-[2rem] bg-white p-6 shadow-[0_14px_34px_rgba(92,108,145,0.09)]">
+                        <summary className="cursor-pointer list-none text-xl font-black text-slate-900">
+                          {item.question}
+                        </summary>
+                        <p className="mt-4 text-base font-medium leading-8 text-slate-500">
+                          {item.answer}
+                        </p>
+                      </details>
+                    ))}
                 </div>
             </div>
         </section>
