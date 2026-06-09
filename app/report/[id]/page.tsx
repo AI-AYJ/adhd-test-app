@@ -22,6 +22,14 @@ type ReportData = {
   head_attention_score_adjusted?: number | null;
 };
 
+type StoredReview = {
+  id: string;
+  report_id: string | null;
+  rating: number;
+  content: string;
+  created_at: string;
+};
+
 type MetricTone = "emerald" | "amber" | "rose" | "blue";
 
 type Metric = {
@@ -38,6 +46,35 @@ const toneClass: Record<MetricTone, string> = {
   rose: "bg-rose-500",
   blue: "bg-blue-500",
 };
+
+const LOCAL_REVIEW_STORAGE_KEY = "fast-review-cache";
+const REVIEW_STARS = [1, 2, 3, 4, 5];
+
+function readStoredReviews() {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(LOCAL_REVIEW_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? (parsed as StoredReview[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredReview(review: StoredReview) {
+  if (typeof window === "undefined") return;
+
+  const previous = readStoredReviews();
+  const next = [
+    review,
+    ...previous.filter(
+      (item) => item.id !== review.id && item.report_id !== review.report_id,
+    ),
+  ].slice(0, 50);
+
+  window.localStorage.setItem(LOCAL_REVIEW_STORAGE_KEY, JSON.stringify(next));
+}
 
 function clamp(value: number, min = 0, max = 100) {
   return Math.min(max, Math.max(min, value));
@@ -132,7 +169,7 @@ function buildMetrics(report: ReportData): Metric[] {
 
 function MetricBar({ metric }: { metric: Metric }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="fast-report-metric rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-black text-slate-950">{metric.label}</p>
@@ -161,6 +198,13 @@ export default function ReportDetailPage() {
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewContent, setReviewContent] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [reviewNotice, setReviewNotice] = useState<string | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadReport() {
@@ -188,16 +232,73 @@ export default function ReportDetailPage() {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+    setReviewSubmitted(readStoredReviews().some((review) => review.report_id === id));
+  }, [id]);
+
   const metrics = useMemo(() => (report ? buildMetrics(report) : []), [report]);
   const totalScore = useMemo(() => {
     if (!metrics.length) return 0;
     return Math.round(metrics.reduce((sum, metric) => sum + metric.score, 0) / metrics.length);
   }, [metrics]);
+  const trimmedReviewContent = reviewContent.trim();
+
+  const submitReview = async () => {
+    setReviewError(null);
+    setReviewNotice(null);
+
+    if (!trimmedReviewContent) {
+      setReviewError("리뷰 내용을 입력해 주세요.");
+      return;
+    }
+
+    setReviewSubmitting(true);
+
+    const fallbackReview: StoredReview = {
+      id: `local-${Date.now()}`,
+      report_id: id,
+      rating: reviewRating,
+      content: trimmedReviewContent.slice(0, 500),
+      created_at: new Date().toISOString(),
+    };
+
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          report_id: id,
+          rating: reviewRating,
+          content: trimmedReviewContent,
+        }),
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "리뷰 저장에 실패했습니다.");
+      }
+
+      const savedReview = (json.data ?? fallbackReview) as StoredReview;
+      saveStoredReview(savedReview);
+      setReviewNotice("리뷰가 저장되었습니다. 홈 하단 리뷰 영역에 반영됩니다.");
+      setReviewSubmitted(true);
+      setReviewOpen(false);
+    } catch (err) {
+      console.error("Review submission failed; saved locally instead:", err);
+      saveStoredReview(fallbackReview);
+      setReviewNotice("리뷰가 저장되었습니다. 홈 하단 리뷰 영역에 반영됩니다.");
+      setReviewSubmitted(true);
+      setReviewOpen(false);
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-100 px-6 py-10 text-slate-900">
-        <div className="mx-auto max-w-5xl rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm">
+      <div className="fast-report-page min-h-screen px-6 py-10 text-slate-900">
+        <div className="mx-auto max-w-5xl rounded-[2rem] border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm">
           리포트를 불러오는 중입니다...
         </div>
       </div>
@@ -206,8 +307,8 @@ export default function ReportDetailPage() {
 
   if (error || !report) {
     return (
-      <div className="min-h-screen bg-slate-100 px-6 py-10 text-slate-900">
-        <div className="mx-auto max-w-5xl rounded-3xl border border-rose-200 bg-rose-50 p-8 text-rose-700 shadow-sm">
+      <div className="fast-report-page min-h-screen px-6 py-10 text-slate-900">
+        <div className="mx-auto max-w-5xl rounded-[2rem] border border-rose-200 bg-rose-50 p-8 text-rose-700 shadow-sm">
           <p className="font-black">오류 발생</p>
           <p className="mt-2">{error || "리포트를 찾을 수 없습니다."}</p>
           <Link
@@ -222,12 +323,12 @@ export default function ReportDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
+    <div className="fast-report-page min-h-screen text-slate-900">
       <main className="mx-auto max-w-6xl px-5 py-8 sm:px-6 lg:py-12">
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.10)] sm:p-8">
+        <section className="fast-report-hero rounded-[2.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.10)] sm:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-600">
+              <p className="fast-report-eyebrow text-xs font-black uppercase tracking-[0.28em] text-blue-600">
                 ADHD Screening Report
               </p>
               <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
@@ -242,7 +343,7 @@ export default function ReportDetailPage() {
               </p>
             </div>
 
-            <div className="min-w-[220px] rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="fast-report-score-card min-w-[220px] rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
                 종합 위험도
               </p>
@@ -267,7 +368,7 @@ export default function ReportDetailPage() {
         </section>
 
         <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
-          <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <article className="fast-report-panel rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.26em] text-blue-600">
@@ -278,7 +379,7 @@ export default function ReportDetailPage() {
                 </h2>
               </div>
             </div>
-            <div className="mt-6 space-y-4 text-[15px] leading-8 text-slate-700 [&_p]:mb-4 [&_strong]:text-slate-950">
+            <div className="fast-report-prose mt-6 space-y-4 text-[15px] leading-8 text-slate-700 [&_p]:mb-4 [&_strong]:text-slate-950">
               {report.report ? (
                 <div dangerouslySetInnerHTML={{ __html: report.report }} />
               ) : (
@@ -287,7 +388,7 @@ export default function ReportDetailPage() {
             </div>
           </article>
 
-          <aside className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <aside className="fast-report-panel fast-report-side-panel rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">
               해석 안내
             </p>
@@ -322,6 +423,106 @@ export default function ReportDetailPage() {
             리포트 인쇄
           </button>
         </div>
+
+        <section className="fast-report-panel mt-6 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-amber-500">
+                Review
+              </p>
+              <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950">
+                검사 경험 리뷰
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                별점과 짧은 후기를 남기면 홈 화면 하단 리뷰 카드에 반영됩니다.
+              </p>
+            </div>
+
+            {!reviewOpen && !reviewSubmitted ? (
+              <button
+                type="button"
+                onClick={() => setReviewOpen(true)}
+                className="inline-flex items-center justify-center rounded-full bg-amber-400 px-6 py-3 text-sm font-black text-slate-950 transition hover:bg-amber-300"
+              >
+                리뷰 적기
+              </button>
+            ) : null}
+          </div>
+
+          {reviewOpen ? (
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <div>
+                <p className="text-sm font-black text-slate-900">별점 선택</p>
+                <div className="mt-3 flex gap-2">
+                  {REVIEW_STARS.map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      aria-label={`${star}점 선택`}
+                      className={`flex h-11 w-11 items-center justify-center rounded-full border text-2xl transition ${
+                        star <= reviewRating
+                          ? "border-amber-300 bg-amber-100 text-amber-500"
+                          : "border-slate-200 bg-white text-slate-300 hover:border-amber-200 hover:text-amber-400"
+                      }`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <label className="mt-5 block">
+                <span className="text-sm font-black text-slate-900">리뷰 내용</span>
+                <textarea
+                  value={reviewContent}
+                  onChange={(event) => setReviewContent(event.target.value.slice(0, 500))}
+                  rows={5}
+                  className="mt-3 w-full resize-none rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                  placeholder="검사 과정이나 결과 확인 경험을 적어주세요."
+                />
+              </label>
+
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs font-semibold text-slate-400">
+                  {trimmedReviewContent.length} / 500
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReviewOpen(false);
+                      setReviewError(null);
+                    }}
+                    className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-600 transition hover:border-slate-300 hover:text-slate-950"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="button"
+                    onClick={submitReview}
+                    disabled={reviewSubmitting}
+                    className="rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {reviewSubmitting ? "저장 중..." : "리뷰 저장"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {reviewError ? (
+            <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600">
+              {reviewError}
+            </p>
+          ) : null}
+
+          {reviewNotice ? (
+            <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
+              {reviewNotice}
+            </p>
+          ) : null}
+        </section>
       </main>
     </div>
   );

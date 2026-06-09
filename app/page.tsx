@@ -17,6 +17,16 @@ type SurveyControls = {
   syncAnswersFromDom?: () => void;
 };
 
+type PublicReview = {
+  id: string;
+  report_id: string | null;
+  rating: number;
+  content: string;
+  created_at: string;
+};
+
+const LOCAL_REVIEW_STORAGE_KEY = "fast-review-cache";
+
 const reasonCards = [
   {
     title: "자꾸 잊어버려요",
@@ -109,6 +119,108 @@ const faqItems = [
     answer: "설문과 CPT를 포함해 약 5분 안에 마치는 흐름을 목표로 설계했습니다.",
   },
 ];
+
+function readCachedReviews() {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(LOCAL_REVIEW_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? (parsed as PublicReview[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function mergeReviews(remoteReviews: PublicReview[], cachedReviews: PublicReview[]) {
+  const merged = new Map<string, PublicReview>();
+
+  [...cachedReviews, ...remoteReviews].forEach((review) => {
+    if (!review?.id || !review.content?.trim()) return;
+    merged.set(review.id, {
+      ...review,
+      content: review.content.trim(),
+      rating: Number(review.rating),
+    });
+  });
+
+  return Array.from(merged.values());
+}
+
+function pickFeaturedReviews(reviews: PublicReview[]) {
+  const fiveStarReviews = reviews.filter(
+    (review) => review.rating === 5 && review.content.trim(),
+  );
+  const shuffled = [...fiveStarReviews].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, fiveStarReviews.length <= 4 ? fiveStarReviews.length : 4);
+}
+
+function ReviewStars({ rating }: { rating: number }) {
+  return (
+    <div className="flex gap-1 text-lg text-amber-400" aria-label={`${rating}점 리뷰`}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <span key={star}>{star <= rating ? "★" : "☆"}</span>
+      ))}
+    </div>
+  );
+}
+
+function ReviewCarousel({ reviews }: { reviews: PublicReview[] }) {
+  if (!reviews.length) return null;
+
+  const loopReviews = reviews.length === 1
+    ? [...reviews, ...reviews, ...reviews, ...reviews]
+    : [...reviews, ...reviews];
+
+  return (
+    <section
+      id="fast-reviews"
+      className="mt-14 overflow-hidden rounded-[2.75rem] border border-slate-200 bg-white py-10 shadow-[0_28px_100px_rgba(15,23,42,0.08)]"
+    >
+      <div className="px-8 md:px-10">
+        <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-500">
+          Reviews
+        </p>
+        <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h3 className="text-4xl font-black tracking-tight text-slate-950 md:text-5xl">
+              FAST를 사용한 사람들의 후기
+            </h3>
+            <p className="mt-4 max-w-2xl text-base font-medium leading-8 text-slate-500 md:text-lg">
+              5점 리뷰 중 최대 4개를 랜덤으로 보여줍니다.
+            </p>
+          </div>
+          <div className="rounded-full border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-black text-amber-600">
+            ★ 5점 리뷰
+          </div>
+        </div>
+      </div>
+
+      <div className="fast-review-viewport mt-8">
+        <div className="fast-review-track">
+          {loopReviews.map((review, index) => (
+            <article key={`${review.id}-${index}`} className="fast-review-card">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">
+                    FAST Review
+                  </p>
+                  <ReviewStars rating={review.rating} />
+                </div>
+                <p className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-500">
+                  {new Date(review.created_at).toLocaleDateString("ko-KR")}
+                </p>
+              </div>
+              <p className="mt-6 line-clamp-5 text-lg font-bold leading-8 text-slate-800">
+                {review.content}
+              </p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function HeroBackdropScene() {
   return (
@@ -222,6 +334,7 @@ function ProcessTimeline() {
 
 export default function Home() {
   const [surveyStarted, setSurveyStarted] = useState(false);
+  const [featuredReviews, setFeaturedReviews] = useState<PublicReview[]>([]);
 
   useEffect(() => {
     const mainScriptVersion = "20260603-01";
@@ -251,6 +364,49 @@ export default function Home() {
     webgazerScript.onload = loadMainScript;
     document.body.appendChild(webgazerScript);
   }, []);
+
+  useEffect(() => {
+    if (surveyStarted) return;
+
+    let active = true;
+
+    async function loadReviews() {
+      const cachedReviews = readCachedReviews();
+
+      try {
+        const res = await fetch("/api/reviews?rating=5&limit=80", { cache: "no-store" });
+        const json = (await res.json()) as {
+          success?: boolean;
+          data?: PublicReview[];
+        };
+
+        if (!res.ok || !json.success || !Array.isArray(json.data)) {
+          throw new Error("리뷰를 불러오지 못했습니다.");
+        }
+
+        if (active) {
+          setFeaturedReviews(pickFeaturedReviews(mergeReviews(json.data, cachedReviews)));
+        }
+      } catch {
+        if (active) {
+          setFeaturedReviews(pickFeaturedReviews(cachedReviews));
+        }
+      }
+    }
+
+    void loadReviews();
+
+    const handleStorage = () => {
+      setFeaturedReviews(pickFeaturedReviews(readCachedReviews()));
+    };
+
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      active = false;
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [surveyStarted]);
 
   const getSurveyControls = (): SurveyControls | null => {
     if (typeof window === "undefined") return null;
@@ -642,6 +798,8 @@ export default function Home() {
                 </div>
             </div>
         </section>
+
+        <ReviewCarousel reviews={featuredReviews} />
         </>
         ) : null}
 
@@ -995,14 +1153,14 @@ export default function Home() {
               <div className="h-4 w-px bg-gray-200"></div>
               <span className="text-xs font-bold uppercase tracking-widest text-blue-600">RESULTS</span>
             </div>
-            <button type="button" id="resultsAdminBtn" className="rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-black text-slate-700 transition hover:border-slate-900 hover:text-slate-900">
+            <button type="button" id="resultsAdminBtn" className="rounded-full border border-blue-100 bg-white px-6 py-3 text-sm font-black text-slate-700 shadow-[0_12px_26px_rgba(99,123,180,0.12)] transition hover:border-blue-200 hover:text-blue-700">
               관리자용
             </button>
           </div>
         </nav>
 
         <div className="mx-auto max-w-6xl space-y-8 px-6 py-10 md:py-14">
-          <section className="rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] md:p-10">
+          <section className="fast-results-panel rounded-[2.75rem] border border-slate-200 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] md:p-10">
             <div className="max-w-4xl">
               <p className="text-xs font-black uppercase tracking-[0.32em] text-blue-600">Survey Result</p>
               <h2 className="mt-4 text-4xl font-black tracking-tight text-slate-900 md:text-5xl">설문 결과 요약</h2>
@@ -1015,13 +1173,13 @@ export default function Home() {
 
             <div id="summaryCards" className="mt-8 grid gap-5 md:grid-cols-2 text-left"></div>
 
-            <div className="mt-10 rounded-[2rem] border border-slate-100 bg-slate-50 p-8 text-left">
+            <div className="fast-results-note mt-10 rounded-[2rem] border border-slate-100 bg-slate-50 p-8 text-left">
               <h3 className="text-2xl font-black text-slate-900">한눈에 보기</h3>
               <div id="summaryHighlights" className="mt-4 space-y-3 text-base leading-7 text-slate-600"></div>
             </div>
           </section>
 
-          <section className="rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] md:p-10">
+          <section className="fast-results-panel rounded-[2.75rem] border border-slate-200 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] md:p-10">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.32em] text-indigo-600">CPT Result</p>
@@ -1065,15 +1223,15 @@ export default function Home() {
             </div>
 
             <div className="mt-10 grid gap-8 lg:grid-cols-2">
-              <div className="rounded-3xl border border-slate-100 bg-slate-50 p-8 lg:col-span-2">
+              <div className="fast-results-note rounded-[2rem] border border-slate-100 bg-slate-50 p-8 lg:col-span-2">
                 <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900"><span className="h-5 w-1 rounded-full bg-blue-600"></span> 정성적 행동 분석</h3>
                 <div id="cpt-interpretation-text" className="space-y-4 text-sm leading-relaxed text-slate-600"></div>
               </div>
             </div>
 
             <div className="mt-10 flex flex-col gap-4 md:flex-row">
-              <button type="button" id="cpt-restart-btn" className="flex-1 rounded-2xl bg-slate-900 py-4 font-bold text-white transition hover:bg-black">처음부터 다시 하기</button>
-              <button type="button" id="cpt-download-raw" className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 py-4 font-bold text-white shadow-lg transition hover:scale-[1.01]">Raw 데이터 Export (.json)</button>
+              <button type="button" id="cpt-restart-btn" className="flex-1 rounded-full border border-slate-200 bg-white py-4 font-bold text-slate-700 transition hover:border-blue-200 hover:text-blue-700">처음부터 다시 하기</button>
+              <button type="button" id="cpt-download-raw" className="flex-1 rounded-full bg-blue-600 py-4 font-bold text-white shadow-[0_16px_30px_rgba(63,109,246,0.22)] transition hover:bg-blue-700">Raw 데이터 Export (.json)</button>
             </div>
           </section>
         </div>

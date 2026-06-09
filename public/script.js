@@ -5535,7 +5535,7 @@ function drawBlendShapes(el, blendShapes) {
             btn.id = 'generateReportBtn';
             btn.type = 'button';
             btn.textContent = '리포트 생성';
-            btn.className = 'flex-1 rounded-2xl bg-blue-600 py-4 font-bold text-white shadow-lg transition hover:bg-blue-700';
+            btn.className = 'flex-1 rounded-full bg-blue-600 py-4 font-bold text-white shadow-[0_16px_30px_rgba(63,109,246,0.22)] transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50';
             btn.addEventListener('click', generateReportFromCptResult);
 
             resultActions.appendChild(btn);

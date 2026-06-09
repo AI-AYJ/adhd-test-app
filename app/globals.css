@@ -24,3 +24,90 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.fast-report-page {
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f8fbff 44%, #eef6ff 100%);
+  color: #30364a;
+  font-family: var(--font-fast-body), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
+.fast-report-page h1,
+.fast-report-page h2,
+.fast-report-page h3,
+.fast-report-page h4,
+.fast-report-page button,
+.fast-report-page a,
+.fast-report-page .font-black,
+.fast-report-page .font-extrabold {
+  font-family: var(--font-fast-display), var(--font-fast-body), "Malgun Gothic", sans-serif;
+  font-style: normal !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+}
+
+.fast-report-page .font-bold,
+.fast-report-page .font-semibold {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+
+.fast-report-page .font-medium {
+  font-weight: 400 !important;
+}
+
+.fast-report-hero,
+.fast-report-panel,
+.fast-report-list-card,
+.fast-report-metric {
+  border-color: #dbeafe !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 251, 255, 0.96) 100%);
+  box-shadow: 0 24px 74px rgba(73, 99, 146, 0.10) !important;
+}
+
+.fast-report-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.fast-report-eyebrow {
+  color: #3f6df6 !important;
+}
+
+.fast-report-score-card,
+.fast-report-stat {
+  border-color: #dbeafe !important;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%) !important;
+}
+
+.fast-report-list-card:hover {
+  transform: translateY(-2px);
+}
+
+.fast-report-metric {
+  min-height: 11.25rem;
+}
+
+.fast-report-side-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 249, 255, 0.92) 100%);
+}
+
+.fast-report-prose {
+  color: #45516b;
+  font-family: var(--font-fast-body), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 1rem;
+  line-height: 1.9;
+}
+
+.fast-report-prose p {
+  margin: 0 0 1rem;
+}
+
+.fast-report-prose strong {
+  color: #30364a;
+  font-family: var(--font-fast-display), var(--font-fast-body), "Malgun Gothic", sans-serif;
+  font-weight: 600;
+}
