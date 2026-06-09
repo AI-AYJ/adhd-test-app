@@ -181,17 +181,11 @@ function ReviewCarousel({ reviews }: { reviews: PublicReview[] }) {
         <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-500">
           Reviews
         </p>
-        <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="mt-4">
           <div>
             <h3 className="text-4xl font-black tracking-tight text-slate-950 md:text-5xl">
               FAST를 사용한 사람들의 후기
             </h3>
-            <p className="mt-4 max-w-2xl text-base font-medium leading-8 text-slate-500 md:text-lg">
-              5점 리뷰 중 최대 4개를 랜덤으로 보여줍니다.
-            </p>
-          </div>
-          <div className="rounded-full border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-black text-amber-600">
-            ★ 5점 리뷰
           </div>
         </div>
       </div>
@@ -200,17 +194,10 @@ function ReviewCarousel({ reviews }: { reviews: PublicReview[] }) {
         <div className="fast-review-track">
           {loopReviews.map((review, index) => (
             <article key={`${review.id}-${index}`} className="fast-review-card">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">
-                    FAST Review
-                  </p>
-                  <ReviewStars rating={review.rating} />
-                </div>
-                <p className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-500">
-                  {new Date(review.created_at).toLocaleDateString("ko-KR")}
-                </p>
-              </div>
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">
+                FAST Review
+              </p>
+              <ReviewStars rating={review.rating} />
               <p className="mt-6 line-clamp-5 text-lg font-bold leading-8 text-slate-800">
                 {review.content}
               </p>
