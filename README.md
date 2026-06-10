@@ -61,20 +61,6 @@ Gemini LLM이 수집된 검사 결과를 사용자가 이해하기 쉬운 리포
 
 ---
 
-## 기술 스택
-
-| 구분 | 기술 |
-| --- | --- |
-| Frontend | Next.js, React, TypeScript |
-| Styling | Tailwind CSS |
-| Tracking | WebGazer, MediaPipe |
-| Backend | Next.js API Routes |
-| Database | Supabase |
-| AI Report | Gemini API |
-| Deployment | Vercel |
-
----
-
 ## 실행 방법
 
 ### 1. 저장소 클론
