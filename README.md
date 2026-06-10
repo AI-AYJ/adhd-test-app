@@ -1,373 +1,153 @@
-# 🧠 ADHD AI Screening System
+# FAST: ADHD Screening Web App
 
-### AI 기반 ADHD 선별검사 및 행동 분석 플랫폼
+> 설문, CPT, 시선/얼굴 행동 데이터를 활용한 ADHD 초기 스크리닝 웹 애플리케이션
 
-ADHD 설문검사, CPT(Continuous Performance Test), 시선 추적(Eye Tracking), AI 리포트 생성을 통합한 웹 기반 ADHD 선별검사 시스템
+FAST는 웹 환경에서 ADHD 관련 경향을 간단히 확인할 수 있도록 만든 스크리닝 시스템입니다.  
+사용자는 설문과 CPT 과제를 진행하고, 검사 결과는 LLM 기반 리포트로 확인할 수 있습니다.
 
-<br>
+> 본 프로젝트는 의료 진단을 대체하지 않는 참고용 스크리닝 도구입니다.
 
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=nextdotjs)](https://nextjs.org/)
+<br />
+
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?logo=supabase&logoColor=white)](https://supabase.com/)
 [![Gemini](https://img.shields.io/badge/Gemini-AI-4285F4)](https://ai.google.dev/)
-[![MediaPipe](https://img.shields.io/badge/MediaPipe-FF6F00)](https://mediapipe.dev/)
-
-<br>
-
-🌐 **Live Demo**
-
-https://adhd-test-app-9ovm.vercel.app/
-
-</div>
+[![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://vercel.com/)
 
 ---
 
-## 📌 Project Overview
+## 📚 Table of Contents
 
-ADHD는 대표적인 신경발달장애 중 하나로 조기 발견과 평가가 중요합니다.
-
-본 프로젝트는 ADHD 선별검사를 웹 환경에서 수행할 수 있도록 설계된 AI 기반 통합 평가 시스템입니다.
-
-사용자는 ADHD 설문검사와 CPT(Continuous Performance Test)를 수행하며, 검사 과정에서 수집되는 행동 데이터와 시선 추적 데이터를 기반으로 AI가 결과를 분석하여 맞춤형 리포트를 제공합니다.
-
----
-
-## 🎯 Objectives
-
-- ADHD 선별검사의 접근성 향상
-- 웹 기반 행동 데이터 수집
-- 시선 추적 기반 집중도 측정
-- AI 기반 결과 해석 자동화
-- 사용자 맞춤형 피드백 제공
+- [Overview](#-overview)
+- [Live Demo](#-live-demo)
+- [Key Features](#-key-features)
+- [System Architecture](#-system-architecture)
+- [Tech Stack](#-tech-stack)
+- [Installation & Setup](#-installation--setup)
+- [Environment Variables](#-environment-variables)
+- [Available Scripts](#-available-scripts)
+- [Disclaimer](#-disclaimer)
 
 ---
 
-# ✨ Features
+## 🧭 Overview
 
-## 📋 ADHD Questionnaire
+FAST는 ADHD 관련 경향을 빠르게 살펴볼 수 있도록 설계된 웹 기반 스크리닝 앱입니다.
 
-DSM 기반 ADHD 설문 검사
-
-### 분석 항목
-
-- Inattention (부주의성)
-- Hyperactivity (과잉행동)
-- Impulsivity (충동성)
+검사는 설문과 CPT 과제로 구성되며, 사용자의 응답과 수행 흐름을 바탕으로 결과를 정리합니다.  
+이후 Gemini 기반 LLM이 사용자가 이해하기 쉬운 문장형 리포트를 생성합니다.
 
 ---
 
-## 🎮 CPT Test
+## 🌐 Live Demo
 
-Continuous Performance Test
-
-### 측정 항목
-
-- Attention Score
-- Response Accuracy
-- Reaction Time
-- Impulsivity
-- Hyperactivity
+https://adhd-test-app.vercel.app/
 
 ---
 
-## 👁️ Eye Tracking
+## ✨ Key Features
 
-MediaPipe FaceMesh 기반 시선 추적
+- **ADHD Screening Flow**  
+  설문과 CPT를 하나의 검사 흐름으로 제공합니다.
 
-### 측정 항목
+- **CPT-Based Attention Task**  
+  짧은 집중 과제를 통해 반응 패턴을 확인합니다.
 
-- Gaze Off-Task Ratio
-- Focus Consistency
-- Head Movement Variability
+- **Camera-Based Tracking**  
+  WebGazer와 MediaPipe를 활용해 검사 중 시선과 얼굴 자세 정보를 참고합니다.
 
----
+- **AI Report Generation**  
+  Gemini LLM이 검사 결과를 사용자가 이해하기 쉬운 리포트로 생성합니다.
 
-## 🤖 AI Report Generation
-
-Google Gemini 기반 분석
-
-### 제공 내용
-
-- ADHD 위험도 평가
-- 행동 패턴 분석
-- 검사 결과 요약
-- 맞춤형 피드백
+- **Report Archive**  
+  생성된 리포트를 다시 확인하고 브라우저 인쇄 기능을 통해 PDF로 저장할 수 있습니다.
 
 ---
 
-# 🏗️ System Architecture
+## 🏗️ System Architecture
+
+![FAST System Architecture](docs/architecture.png)
 
 ```text
-┌──────────────────────┐
-│      User            │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ ADHD Questionnaire   │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│      CPT Test        │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│    Eye Tracking      │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│      Supabase        │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│     Gemini AI        │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│  ADHD Risk Report    │
-└──────────────────────┘
+User
+  ↓
+FAST Web App
+  ↓
+Survey + CPT
+  ↓
+Gaze / Head Pose Tracking
+  ↓
+Metric Processing
+  ↓
+Supabase
+  ↓
+Gemini LLM
+  ↓
+Screening Report
 ```
 
 ---
 
-# 🖥️ Screenshots
+## 🛠️ Tech Stack
 
-## Main Page
-
-![Main](docs/main-page.png)
-
----
-
-## ADHD Questionnaire
-
-![Questionnaire](docs/questionnaire.png)
-
----
-
-## CPT Test
-
-![CPT](docs/cpt-test.png)
+| Area | Stack |
+| --- | --- |
+| Frontend | Next.js, React, TypeScript, Tailwind CSS |
+| Tracking | WebGazer, MediaPipe |
+| Backend | Next.js API Routes |
+| Database | Supabase |
+| AI Report | Gemini API |
+| Deployment | Vercel |
 
 ---
 
-## AI Analysis Report
-
-![Report](docs/report.png)
-
----
-
-# 🧠 ADHD Analysis Pipeline
-
-## Input Features
-
-### Questionnaire
-
-- Inattention Count
-- Hyperactivity Count
-
-### CPT Metrics
-
-- Attention Score
-- Timeliness Score
-- Impulsivity Score
-- Hyperactivity Score
-
-### Eye Tracking Metrics
-
-- Gaze Off-Task Ratio
-- Head Movement Variability
-
----
-
-## AI Processing
-
-Gemini AI analyzes the collected behavioral data and generates a personalized ADHD screening report.
-
-```text
-Questionnaire
-      +
-CPT Metrics
-      +
-Eye Tracking
-      ↓
- Feature Extraction
-      ↓
- Gemini Analysis
-      ↓
- ADHD Risk Assessment
-      ↓
- Personalized Report
-```
-
----
-
-# 🗄️ Database Schema
-
-## user_results
-
-| Field | Type |
-|---------|---------|
-| id | UUID |
-| created_at | Timestamp |
-| inattention_count | Integer |
-| hyperactivity_count | Integer |
-| cpt_attention | Float |
-| cpt_timeliness | Float |
-| cpt_impulsivity | Float |
-| cpt_hyperactivity | Float |
-| gaze_off_task_ratio | Float |
-| head_movement_variability | Float |
-| ai_report | Text |
-
----
-
-# 🛠 Tech Stack
-
-## Frontend
-
-- Next.js 15
-- React
-- TypeScript
-- Tailwind CSS
-
-## Backend
-
-- Next.js API Routes
-
-## Database
-
-- Supabase
-
-## AI
-
-- Google Gemini API
-
-## Computer Vision
-
-- MediaPipe FaceMesh
-
-## Deployment
-
-- Vercel
-
----
-
-# 📂 Project Structure
-
-```bash
-my-app
-│
-├── app
-│   ├── api
-│   │   ├── analyze
-│   │   ├── generate-report
-│   │   └── results
-│   │
-│   ├── report
-│   └── page.tsx
-│
-├── components
-│
-├── lib
-│   ├── gemini.ts
-│   └── supabase.ts
-│
-├── public
-│
-└── docs
-```
-
----
-
-# 🚀 Installation
-
-## Clone Repository
+## 🚀 Installation & Setup
 
 ```bash
 git clone https://github.com/AI-AYJ/adhd-test-app.git
-```
-
-## Move Directory
-
-```bash
 cd adhd-test-app
-```
-
-## Install Packages
-
-```bash
 npm install
-```
-
-## Environment Variables
-
-Create `.env.local`
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-
-GEMINI_API_KEY=
-```
-
-## Run Development Server
-
-```bash
 npm run dev
 ```
 
----
-
-# 📊 Example Result
+Development server:
 
 ```text
-ADHD Risk Level : Moderate
-
-Inattention : High
-Hyperactivity : Moderate
-
-Key Findings
-
-• Frequent attention shifts detected
-• Elevated CPT impulsivity score
-• Increased gaze deviation ratio
-
-AI Interpretation
-
-The user demonstrates patterns associated
-with attentional difficulties and may benefit
-from further professional evaluation.
+http://localhost:3000
 ```
 
 ---
 
-# 🔬 Future Work
+## 🔐 Environment Variables
 
-- ADHD/Non-ADHD 분류 모델 구축
-- 머신러닝 기반 위험도 예측
-- 장기 추적 데이터 분석
-- 모바일 환경 최적화
-- 의료기관 연계 기능
+Create a `.env.local` file in the project root.
 
----
-
-# 👨‍💻 Team
-
-Capstone Design Project
-
-AI-Based ADHD Screening System
-
-2026
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+GEMINI_API_KEY=
+```
 
 ---
 
-<div align="center">
+## 📦 Available Scripts
 
-### ⭐ If you found this project interesting, please consider giving it a star!
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
+```
 
-</div>
+---
+
+## ⚠️ Disclaimer
+
+FAST is not a medical diagnostic tool.
+
+본 시스템은 ADHD를 진단하기 위한 의료기기가 아니라, 사용자의 주의 및 행동 특성을 살펴보기 위한 초기 스크리닝 도구입니다.  
+정확한 진단과 치료 여부는 전문 의료진의 평가가 필요합니다.
+
+카메라 영상은 저장, 녹화, 업로드되지 않으며 검사 중 지표 계산을 위해서만 사용됩니다.
