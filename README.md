@@ -105,46 +105,6 @@ http://localhost:3000
 
 ---
 
-## Environment Variables
-
-Create a `.env.local` file in the project root.
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-GEMINI_API_KEY=
-```
-
----
-
-## Scripts
-
-### Development
-
-```bash
-npm run dev
-```
-
-### Production Build
-
-```bash
-npm run build
-```
-
-### Start Production Server
-
-```bash
-npm run start
-```
-
-### Lint
-
-```bash
-npm run lint
-```
-
----
-
 ## Note
 
 FAST is not a medical diagnostic tool.
