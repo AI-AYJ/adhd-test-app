@@ -56,10 +56,10 @@ const featureHighlights = [
     description: "문항 답변만이 아니라 과제를 수행하는 흐름까지 참고합니다.",
   },
   {
-    label: "결과 제공",
-    value: "RAW",
-    title: "분석 가능한 결과 데이터를 제공합니다",
-    description: "설문, 시선, CPT 데이터를 바탕으로 결과 요약을 확인할 수 있습니다.",
+    label: "리포트",
+    value: "Report",
+    title: "LLM이 이해하기 쉬운 리포트를 생성합니다",
+    description: "검사 결과를 문장형 리포트로 정리하고, 필요할 때 저장하거나 내려받을 수 있습니다.",
   },
 ];
 
@@ -688,8 +688,8 @@ export default function Home() {
                             <p className="mt-2 text-xs font-bold text-slate-500">설문 + CPT</p>
                         </div>
                         <div className="fast-mini-stat rounded-[1.5rem] px-4 py-5 text-center">
-                            <p className="text-2xl font-black text-blue-600">RAW</p>
-                            <p className="mt-2 text-xs font-bold text-slate-500">데이터 제공</p>
+                            <p className="text-2xl font-black text-blue-600">리포트</p>
+                            <p className="mt-2 text-xs font-bold text-slate-500">LLM 생성</p>
                         </div>
                     </div>
                 </div>
