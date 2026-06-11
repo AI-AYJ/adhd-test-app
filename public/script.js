@@ -173,15 +173,29 @@ function stopWebGazer() {
   const instance = window.webgazer;
   if (!instance) return;
 
-  try {
-    if (typeof instance.end === "function") {
-      instance.end();
-    } else if (typeof instance.pause === "function") {
-      instance.pause();
-    }
-  } catch (error) {
-    console.error("WebGazer failed to stop", error);
-  } finally {
+    try {
+      if (typeof instance.end === "function") {
+        instance.end();
+      } else if (typeof instance.pause === "function") {
+        instance.pause();
+      }
+    } catch (error) {
+      const message = error?.message ?? "";
+      const isBenignCleanupError =
+        error instanceof TypeError && message.includes("remove");
+
+      if (!isBenignCleanupError) {
+        console.warn("WebGazer cleanup skipped", error);
+      }
+
+      if (typeof instance.pause === "function") {
+        try {
+          instance.pause();
+        } catch {
+          // WebGazer is already being torn down by the page lifecycle.
+        }
+      }
+    } finally {
     webgazerRunning = false;
     webgazerBooting = false;
     webgazerState.status = "stopped";

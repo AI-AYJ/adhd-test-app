@@ -186,7 +186,7 @@ function buildMetrics(report: ReportData): Metric[] {
       label: "머리 자세 변동성",
       value:
         headForwardRatio > 0
-          ? `V ${Math.round(headRotationVariability)} / 정면 ${Math.round(headForwardRatio)}%`
+          ? `정면 ${Math.round(headForwardRatio)}%`
           : `${Math.round(headRotationVariability)}`,
       detail:
         headForwardRatio > 0
@@ -236,161 +236,232 @@ function BaselinePositionScatter({
     return null;
   }
 
-  const left = 52;
-  const top = 24;
-  const plotWidth = 292;
-  const plotHeight = 188;
-  const right = left + plotWidth;
-  const bottom = top + plotHeight;
-  const toX = (value: number) => left + (toPlotValue(value) / 100) * plotWidth;
-  const toY = (value: number) => top + ((100 - toPlotValue(value)) / 100) * plotHeight;
   const current = visualization.current;
   const mean = visualization.mean;
-  const currentX = toX(current.behavior_risk_score);
-  const currentY = toY(current.survey_risk_score);
-  const meanX = toX(mean.behavior_risk_score);
-  const meanY = toY(mean.survey_risk_score);
+  const baselineCount = visualization.baseline.length;
+  const lowerOrEqualCount = visualization.baseline.filter(
+    (point) => point.risk_score <= current.risk_score,
+  ).length;
+  const percentile = Math.round((lowerOrEqualCount / Math.max(1, baselineCount)) * 100);
+  const curveLeft = 42;
+  const curveTop = 22;
+  const curveWidth = 636;
+  const curveHeight = 218;
+  const curveBottom = curveTop + curveHeight;
+  const densityBins = [
+    { label: "0", min: 0, max: 10 },
+    { label: "10", min: 11, max: 20 },
+    { label: "20", min: 21, max: 30 },
+    { label: "30", min: 31, max: 40 },
+    { label: "40", min: 41, max: 50 },
+    { label: "50", min: 51, max: 60 },
+    { label: "60", min: 61, max: 70 },
+    { label: "70", min: 71, max: 80 },
+    { label: "80", min: 81, max: 90 },
+    { label: "90", min: 91, max: 100 },
+  ].map((bin) => ({
+    ...bin,
+    count: visualization.baseline.filter((point) => {
+      const score = toPlotValue(point.risk_score);
+      return score >= bin.min && score <= bin.max;
+    }).length,
+  }));
+  const smoothedCounts = densityBins.map((bin, index) => {
+    const prev = densityBins[index - 1]?.count ?? bin.count;
+    const next = densityBins[index + 1]?.count ?? bin.count;
+    return prev * 0.25 + bin.count * 0.5 + next * 0.25;
+  });
+  const maxDensity = Math.max(...smoothedCounts, 1);
+  const curvePoints = smoothedCounts.map((count, index) => {
+    const x = curveLeft + (index / Math.max(1, smoothedCounts.length - 1)) * curveWidth;
+    const y = curveBottom - (count / maxDensity) * (curveHeight - 18);
+    return { x, y };
+  });
+  const curvePath = curvePoints
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+    .join(" ");
+  const areaPath = `${curvePath} L ${curveLeft + curveWidth} ${curveBottom} L ${curveLeft} ${curveBottom} Z`;
+  const currentX = curveLeft + (toPlotValue(current.risk_score) / 100) * curveWidth;
+  const currentBinIndex = Math.min(
+    smoothedCounts.length - 1,
+    Math.max(0, Math.floor(toPlotValue(current.risk_score) / 10)),
+  );
+  const currentDensityY = curvePoints[currentBinIndex]?.y ?? curveBottom;
+  const meanX = curveLeft + (toPlotValue(mean.risk_score) / 100) * curveWidth;
 
   return (
-    <section className="fast-report-panel mt-6 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-amber-500">
-            Baseline Map
-          </p>
-          <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950">
-            표본 50명 대비 현재 위치
-          </h2>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
-            검은 점은 기존 표본 데이터, 노란 점은 현재 결과입니다. 빨간 기준선은 표본 평균이며
-            의학적 진단 기준이 아니라 현재 데이터 안에서의 상대 위치를 보여줍니다.
-          </p>
+    <section className="fast-report-panel mt-6 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-500">
+                Baseline
+              </p>
+              <span className="rounded-full bg-slate-50 px-3 py-1 text-[11px] font-bold text-slate-500">
+                표본 {visualization.baseline_count}명
+              </span>
+            </div>
+            <h2 className="mt-2 text-xl font-black tracking-tight text-slate-950">
+              표본 대비 위치
+            </h2>
+            <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
+              표본 50명의 최종 점수 분포를 부드러운 곡선으로 보여줍니다. 노란 마커는 현재
+              결과의 위치입니다.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 lg:w-[420px]">
+            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                최종 점수
+              </p>
+              <p className="mt-1 text-2xl font-black text-slate-950">
+                {current.risk_score}
+                <span className="ml-1 text-xs font-bold text-slate-400">
+                  평균 {mean.risk_score}
+                </span>
+              </p>
+            </div>
+            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                표본 내 위치
+              </p>
+              <p className="mt-1 text-2xl font-black text-slate-950">
+                {percentile}
+                <span className="ml-1 text-xs font-bold text-slate-400">%</span>
+              </p>
+            </div>
+            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                기준 인원
+              </p>
+              <p className="mt-1 text-2xl font-black text-slate-950">
+                {baselineCount}
+                <span className="ml-1 text-xs font-bold text-slate-400">명</span>
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-slate-500">
-          <div className="rounded-2xl bg-slate-50 px-4 py-3">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">표본</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{visualization.baseline_count}</p>
+        <div className="min-w-0">
+          <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white">
+            <svg
+              viewBox="0 0 720 300"
+              role="img"
+              aria-label="표본 최종 점수 밀도 곡선과 현재 결과 위치"
+              className="h-auto w-full bg-white"
+            >
+              <rect x="0" y="0" width="720" height="300" fill="#ffffff" />
+              {[0, 25, 50, 75, 100].map((tick) => {
+                const x = curveLeft + (tick / 100) * curveWidth;
+
+                return (
+                  <g key={`density-grid-${tick}`}>
+                    <line
+                      x1={x}
+                      y1={curveTop}
+                      x2={x}
+                      y2={curveBottom}
+                      stroke="#e2e8f0"
+                      strokeWidth="1"
+                    />
+                    <text x={x} y={curveBottom + 24} textAnchor="middle" fill="#94a3b8" fontSize="10">
+                      {tick}
+                    </text>
+                  </g>
+                );
+              })}
+              <line
+                x1={curveLeft}
+                y1={curveBottom}
+                x2={curveLeft + curveWidth}
+                y2={curveBottom}
+                stroke="#334155"
+                strokeWidth="1.6"
+              />
+              <path d={areaPath} fill="#dbeafe" opacity="0.62" />
+              <path d={curvePath} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" />
+              {curvePoints.map((point, index) => (
+                <circle
+                  key={`density-point-${index}`}
+                  cx={point.x}
+                  cy={point.y}
+                  r="2.8"
+                  fill="#2563eb"
+                  opacity="0.42"
+                />
+              ))}
+              <line
+                x1={meanX}
+                y1={curveTop + 10}
+                x2={meanX}
+                y2={curveBottom}
+                stroke="#ef4444"
+                strokeDasharray="5 5"
+                strokeWidth="1.6"
+                opacity="0.72"
+              />
+              <text
+                x={Math.min(meanX + 8, curveLeft + curveWidth - 58)}
+                y={curveTop + 22}
+                fill="#ef4444"
+                fontSize="11"
+                fontWeight="800"
+              >
+                평균 {mean.risk_score}
+              </text>
+              <line
+                x1={currentX}
+                y1={curveBottom}
+                x2={currentX}
+                y2={Math.min(currentDensityY - 10, curveBottom - 40)}
+                stroke="#facc15"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+              <circle cx={currentX} cy={Math.min(currentDensityY - 16, curveBottom - 48)} r="15" fill="#facc15" opacity="0.28" />
+              <circle
+                cx={currentX}
+                cy={Math.min(currentDensityY - 16, curveBottom - 48)}
+                r="8"
+                fill="#facc15"
+                stroke="#0f172a"
+                strokeWidth="2"
+              />
+              <text
+                x={Math.min(currentX + 16, curveLeft + curveWidth - 62)}
+                y={Math.max(Math.min(currentDensityY - 28, curveBottom - 60), curveTop + 18)}
+                fill="#0f172a"
+                fontSize="12"
+                fontWeight="800"
+              >
+                현재 {current.risk_score}
+              </text>
+              <text x={curveLeft} y={curveTop + 10} fill="#64748b" fontSize="11" fontWeight="800">
+                표본 밀도
+              </text>
+              <text x={curveLeft + curveWidth} y={curveBottom + 42} textAnchor="end" fill="#64748b" fontSize="11" fontWeight="800">
+                최종 점수
+              </text>
+            </svg>
           </div>
-          <div className="rounded-2xl bg-slate-50 px-4 py-3">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">설문</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{current.survey_risk_score}</p>
-          </div>
-          <div className="rounded-2xl bg-slate-50 px-4 py-3">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">수행</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{current.behavior_risk_score}</p>
+
+          <div className="mt-3 flex flex-wrap gap-3 text-[11px] font-bold text-slate-500">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-5 rounded-full bg-blue-200" />
+              표본 분포
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-amber-700">
+              <span className="h-2 w-2 rounded-full border border-slate-900 bg-amber-300" />
+              현재 위치
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-rose-500">
+              <span className="h-px w-5 border-t border-dashed border-rose-400" />
+              표본 평균
+            </span>
           </div>
         </div>
-      </div>
-
-      <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50">
-        <svg
-          viewBox="0 0 380 258"
-          role="img"
-          aria-label="표본 50명 대비 설문 위험도와 디지털 수행 위험도 산점도"
-          className="h-auto w-full bg-white"
-        >
-          <rect x={left} y={top} width={plotWidth} height={plotHeight} fill="#f8fafc" />
-          {[0, 25, 50, 75, 100].map((tick) => (
-            <g key={`grid-${tick}`}>
-              <line
-                x1={toX(tick)}
-                y1={top}
-                x2={toX(tick)}
-                y2={bottom}
-                stroke="#e2e8f0"
-                strokeWidth="1"
-              />
-              <line
-                x1={left}
-                y1={toY(tick)}
-                x2={right}
-                y2={toY(tick)}
-                stroke="#e2e8f0"
-                strokeWidth="1"
-              />
-            </g>
-          ))}
-          <line x1={left} y1={bottom} x2={right} y2={bottom} stroke="#0f172a" strokeWidth="2" />
-          <line x1={left} y1={top} x2={left} y2={bottom} stroke="#0f172a" strokeWidth="2" />
-          <line
-            x1={left}
-            y1={meanY}
-            x2={right}
-            y2={meanY}
-            stroke="#ef4444"
-            strokeDasharray="5 5"
-            strokeWidth="1.5"
-            opacity="0.8"
-          />
-          <line
-            x1={meanX}
-            y1={top}
-            x2={meanX}
-            y2={bottom}
-            stroke="#ef4444"
-            strokeDasharray="5 5"
-            strokeWidth="1.5"
-            opacity="0.8"
-          />
-
-          {visualization.baseline.map((point, index) => (
-            <circle
-              key={`${point.id}-${index}`}
-              cx={toX(point.behavior_risk_score)}
-              cy={toY(point.survey_risk_score)}
-              r="3.2"
-              fill="#0f172a"
-              opacity="0.24"
-            />
-          ))}
-
-          <circle cx={currentX} cy={currentY} r="12" fill="#facc15" opacity="0.25" />
-          <circle cx={currentX} cy={currentY} r="7" fill="#facc15" stroke="#0f172a" strokeWidth="2" />
-          <text
-            x={Math.min(currentX + 12, right - 44)}
-            y={Math.max(currentY - 12, top + 14)}
-            fill="#0f172a"
-            fontSize="11"
-            fontWeight="800"
-          >
-            현재
-          </text>
-
-          <text x={left - 12} y={top + 8} textAnchor="end" fill="#475569" fontSize="11" fontWeight="800">
-            설문 위험도
-          </text>
-          <text x={right} y={bottom + 28} textAnchor="end" fill="#475569" fontSize="11" fontWeight="800">
-            디지털 수행 위험도
-          </text>
-          <text x={left} y={bottom + 18} textAnchor="middle" fill="#94a3b8" fontSize="10">
-            0
-          </text>
-          <text x={right} y={bottom + 18} textAnchor="middle" fill="#94a3b8" fontSize="10">
-            100
-          </text>
-          <text x={left - 14} y={bottom + 3} textAnchor="end" fill="#94a3b8" fontSize="10">
-            0
-          </text>
-          <text x={left - 14} y={top + 4} textAnchor="end" fill="#94a3b8" fontSize="10">
-            100
-          </text>
-        </svg>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-3 text-xs font-bold text-slate-500">
-        <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-slate-950 opacity-40" />
-          표본 데이터
-        </span>
-        <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-2 text-amber-700">
-          <span className="h-2.5 w-2.5 rounded-full border border-slate-950 bg-amber-300" />
-          현재 결과
-        </span>
-        <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-2 text-rose-600">
-          <span className="h-px w-5 border-t border-dashed border-rose-500" />
-          표본 평균선
-        </span>
       </div>
     </section>
   );
@@ -416,7 +487,9 @@ export default function ReportDetailPage() {
       setError(null);
 
       try {
-        const res = await fetch(`/api/analyze?id=${encodeURIComponent(id)}`);
+        const res = await fetch(`/api/analyze?id=${encodeURIComponent(id)}`, {
+          cache: "no-store",
+        });
         const json = await res.json();
 
         if (!res.ok || !json.success) {
