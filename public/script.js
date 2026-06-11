@@ -3399,7 +3399,7 @@ function drawBlendShapes(el, blendShapes) {
                         cpt_hyperactivity: metrics.hyperactivity ?? 0,
                         gaze_off_task_ratio: metrics.gazeTotalMs > 0
                             ? Number(((metrics.distractMs / metrics.gazeTotalMs) * 100).toFixed(2))
-                            : 0,
+                            : null,
                         ...buildHeadPosePayload(metrics),
                         final_risk_level: window.cptAnalytics?.finalRiskLevel ?? null,
                         report: window.cptAnalytics?.report ?? interpretation ?? null,
@@ -5389,6 +5389,26 @@ function drawBlendShapes(el, blendShapes) {
         function buildHeadPosePayload(metrics) {
             const headPoseSummary = metrics?.headPoseSummary ?? summarizeHeadPoseMetrics(metrics);
             const headPose = metrics?.headPose ?? null;
+            const hasHeadPoseMeasurement = Boolean(
+                headPose && Number(headPoseSummary?.totalFrames) > 0
+            );
+
+            if (!hasHeadPoseMeasurement) {
+                return {
+                    head_movement_variability: null,
+                    head_pose_forward_ratio: null,
+                    head_pose_left_ratio: null,
+                    head_pose_right_ratio: null,
+                    head_pose_down_ratio: null,
+                    head_yaw_std: null,
+                    head_pitch_std: null,
+                    head_roll_std: null,
+                    head_rotation_variability: null,
+                    head_attention_score: null,
+                    head_attention_score_adjusted: null,
+                    head_pose_raw: null
+                };
+            }
 
             return {
                 head_movement_variability: headPoseSummary.rotationVariability ?? 0,
@@ -5435,7 +5455,7 @@ function drawBlendShapes(el, blendShapes) {
                 cpt_hyperactivity: metrics.hyperactivity ?? 0,
                 gaze_off_task_ratio: metrics.gazeTotalMs > 0
                     ? Number(((metrics.distractMs / metrics.gazeTotalMs) * 100).toFixed(2))
-                    : 0,
+                    : null,
                 ...buildHeadPosePayload(metrics),
                 final_risk_level: window.cptAnalytics?.finalRiskLevel ?? "분석 완료"
             };

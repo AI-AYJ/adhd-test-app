@@ -49,9 +49,9 @@ function buildAnalyzePayload(body: Record<string, unknown>) {
 
 function toRiskPoint(row: Record<string, unknown>) {
   const fallbackScores = buildRiskScoreSnapshot(normalizeReportMetrics(row));
-  const surveyRiskScore = toNumber(row.survey_risk_score, fallbackScores.survey);
-  const behaviorRiskScore = toNumber(row.behavior_risk_score, fallbackScores.behavior);
-  const riskScore = toNumber(row.risk_score, fallbackScores.total);
+  const surveyRiskScore = toNumber(row.survey_risk_score, fallbackScores.survey ?? 0);
+  const behaviorRiskScore = toNumber(row.behavior_risk_score, fallbackScores.behavior ?? 0);
+  const riskScore = toNumber(row.risk_score, fallbackScores.total ?? 0);
 
   return {
     id: typeof row.id === "string" ? row.id : "",
@@ -74,6 +74,7 @@ async function buildBaselineVisualization(currentRow: Record<string, unknown>) {
     .eq("profile_type", "baseline")
     .not("survey_risk_score", "is", null)
     .not("behavior_risk_score", "is", null)
+    .not("risk_score", "is", null)
     .order("created_at", { ascending: true })
     .limit(50);
 

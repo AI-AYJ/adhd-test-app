@@ -9,14 +9,14 @@ type ReportData = {
   created_at: string;
   final_risk_level: string | null;
   report: string | null;
-  inattention_count: number;
-  hyperactivity_count: number;
-  cpt_attention: number;
-  cpt_timeliness: number;
-  cpt_impulsivity: number;
-  cpt_hyperactivity: number;
-  gaze_off_task_ratio: number;
-  head_movement_variability: number;
+  inattention_count: number | null;
+  hyperactivity_count: number | null;
+  cpt_attention: number | null;
+  cpt_timeliness: number | null;
+  cpt_impulsivity: number | null;
+  cpt_hyperactivity: number | null;
+  gaze_off_task_ratio: number | null;
+  head_movement_variability: number | null;
   head_rotation_variability?: number | null;
   head_pose_forward_ratio?: number | null;
   head_attention_score_adjusted?: number | null;
@@ -42,6 +42,7 @@ type Metric = {
   detail: string;
   score: number;
   tone: MetricTone;
+  measured: boolean;
 };
 
 type RiskPoint = {
@@ -107,6 +108,14 @@ function percent(value: number) {
   return `${Math.round(value)}%`;
 }
 
+function isMeasuredNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function measuredValue(value: number | null | undefined, fallback = 0) {
+  return isMeasuredNumber(value) ? value : fallback;
+}
+
 function getTone(score: number): MetricTone {
   if (score >= 70) return "rose";
   if (score >= 40) return "amber";
@@ -121,79 +130,107 @@ function getConcernLabel(score: number) {
 
 function buildMetrics(report: ReportData): Metric[] {
   const headRotationVariability =
-    report.head_rotation_variability ?? report.head_movement_variability ?? 0;
-  const headForwardRatio = report.head_pose_forward_ratio ?? 0;
-  const headAdjustedAttention = report.head_attention_score_adjusted ?? 0;
-  const cptHitCount = report.cpt_attention ?? 0;
-  const cptOmitCount = report.inattention_count ?? 0;
+    report.head_rotation_variability ?? report.head_movement_variability ?? null;
+  const headForwardRatio = report.head_pose_forward_ratio ?? null;
+  const headAdjustedAttention = report.head_attention_score_adjusted ?? null;
+  const inattentionCount = measuredValue(report.inattention_count);
+  const hyperactivityCount = measuredValue(report.hyperactivity_count);
+  const cptHitCount = measuredValue(report.cpt_attention);
+  const cptOmitCount = inattentionCount;
+  const cptImpulsivityCount = measuredValue(report.cpt_impulsivity);
   const cptTargetCount = cptHitCount + cptOmitCount;
   const cptNonTargetCount = Math.max(0, CPT_TOTAL_TRIALS - cptTargetCount);
+  const gazeValue = measuredValue(report.gaze_off_task_ratio);
+  const headRotationValue = measuredValue(headRotationVariability);
+  const headForwardValue = measuredValue(headForwardRatio);
+  const headAdjustedAttentionValue = measuredValue(headAdjustedAttention);
+  const inattentionMeasured = isMeasuredNumber(report.inattention_count);
+  const hyperactivityMeasured = isMeasuredNumber(report.hyperactivity_count);
+  const omissionMeasured = inattentionMeasured && isMeasuredNumber(report.cpt_attention);
+  const impulsivityMeasured = isMeasuredNumber(report.cpt_impulsivity);
+  const gazeMeasured = isMeasuredNumber(report.gaze_off_task_ratio);
+  const movementMeasured =
+    isMeasuredNumber(headRotationVariability) &&
+    isMeasuredNumber(headForwardRatio) &&
+    isMeasuredNumber(headAdjustedAttention);
 
-  const inattentionRisk = clamp((report.inattention_count / 9) * 100);
-  const hyperactivityRisk = clamp((report.hyperactivity_count / 9) * 100);
-  const omissionRisk = cptTargetCount > 0
+  const inattentionRisk = inattentionMeasured
+    ? clamp((inattentionCount / 9) * 100)
+    : 0;
+  const hyperactivityRisk = hyperactivityMeasured
+    ? clamp((hyperactivityCount / 9) * 100)
+    : 0;
+  const omissionRisk = omissionMeasured && cptTargetCount > 0
     ? clamp((cptOmitCount / cptTargetCount) * 100)
     : 0;
-  const impulsivityRisk = cptNonTargetCount > 0
-    ? clamp((report.cpt_impulsivity / cptNonTargetCount) * 100)
+  const impulsivityRisk = impulsivityMeasured && cptNonTargetCount > 0
+    ? clamp((cptImpulsivityCount / cptNonTargetCount) * 100)
     : 0;
-  const gazeRisk = clamp(report.gaze_off_task_ratio);
-  const movementRisk = clamp(
-    Math.round(
-      headRotationVariability * 2.8 +
-        Math.max(0, 85 - headForwardRatio) * 0.7 +
-        Math.max(0, 75 - headAdjustedAttention) * 0.6,
-    ),
-  );
+  const gazeRisk = gazeMeasured ? clamp(gazeValue) : 0;
+  const movementRisk = movementMeasured
+    ? clamp(
+        Math.round(
+          headRotationValue * 2.8 +
+            Math.max(0, 85 - headForwardValue) * 0.7 +
+            Math.max(0, 75 - headAdjustedAttentionValue) * 0.6,
+        ),
+      )
+    : 0;
 
   return [
     {
       label: "부주의 경향",
-      value: `${report.inattention_count}개`,
+      value: inattentionMeasured ? `${inattentionCount}개` : "측정 실패",
       detail: "설문에서 주의 유지나 산만함과 관련된 응답 수입니다.",
       score: inattentionRisk,
-      tone: getTone(inattentionRisk),
+      tone: inattentionMeasured ? getTone(inattentionRisk) : "blue",
+      measured: inattentionMeasured,
     },
     {
       label: "과잉행동·충동성",
-      value: `${report.hyperactivity_count}개`,
+      value: hyperactivityMeasured ? `${hyperactivityCount}개` : "측정 실패",
       detail: "설문에서 안절부절못함이나 충동 반응과 관련된 응답 수입니다.",
       score: hyperactivityRisk,
-      tone: getTone(hyperactivityRisk),
+      tone: hyperactivityMeasured ? getTone(hyperactivityRisk) : "blue",
+      measured: hyperactivityMeasured,
     },
     {
       label: "주의 지속성",
-      value: `누락 ${Math.round(omissionRisk)}%`,
-      detail: `CPT 목표 자극 ${cptTargetCount}회 중 ${cptOmitCount}회를 놓친 비율입니다.`,
+      value: omissionMeasured ? `누락 ${Math.round(omissionRisk)}%` : "측정 실패",
+      detail: omissionMeasured
+        ? `CPT 목표 자극 ${cptTargetCount}회 중 ${cptOmitCount}회를 놓친 비율입니다.`
+        : "CPT 목표 자극 반응 데이터가 충분하지 않아 산출하지 못했습니다.",
       score: omissionRisk,
-      tone: getTone(omissionRisk),
+      tone: omissionMeasured ? getTone(omissionRisk) : "blue",
+      measured: omissionMeasured,
     },
     {
       label: "반응 조절",
-      value: `오경보 ${Math.round(impulsivityRisk)}%`,
-      detail: `CPT 비표적 자극 ${cptNonTargetCount}회 중 ${report.cpt_impulsivity}회 반응한 비율입니다.`,
+      value: impulsivityMeasured ? `오경보 ${Math.round(impulsivityRisk)}%` : "측정 실패",
+      detail: impulsivityMeasured
+        ? `CPT 비표적 자극 ${cptNonTargetCount}회 중 ${cptImpulsivityCount}회 반응한 비율입니다.`
+        : "CPT 비표적 자극 반응 데이터가 충분하지 않아 산출하지 못했습니다.",
       score: impulsivityRisk,
-      tone: getTone(impulsivityRisk),
+      tone: impulsivityMeasured ? getTone(impulsivityRisk) : "blue",
+      measured: impulsivityMeasured,
     },
     {
       label: "시선 이탈",
-      value: percent(report.gaze_off_task_ratio),
+      value: gazeMeasured ? percent(gazeValue) : "측정 실패",
       detail: "과제 영역 밖으로 시선이 벗어난 비율입니다.",
       score: gazeRisk,
-      tone: getTone(gazeRisk),
+      tone: gazeMeasured ? getTone(gazeRisk) : "blue",
+      measured: gazeMeasured,
     },
     {
       label: "머리 자세 변동성",
-      value:
-        headForwardRatio > 0
-          ? `정면 ${Math.round(headForwardRatio)}%`
-          : `${Math.round(headRotationVariability)}`,
-      detail:
-        headForwardRatio > 0
-          ? `머리 회전 변동성, 정면 유지 비율, 보정 집중도 ${Math.round(headAdjustedAttention)}를 함께 반영했습니다.`
-          : "검사 중 머리 움직임의 변동성을 보여주는 보조 지표입니다.",
+      value: movementMeasured ? `정면 ${Math.round(headForwardValue)}%` : "측정 실패",
+      detail: movementMeasured
+        ? `머리 회전 변동성, 정면 유지 비율, 보정 집중도 ${Math.round(headAdjustedAttentionValue)}를 함께 반영했습니다.`
+        : "머리 자세 데이터가 충분하지 않아 산출하지 못했습니다.",
       score: movementRisk,
-      tone: getTone(movementRisk),
+      tone: movementMeasured ? getTone(movementRisk) : "blue",
+      measured: movementMeasured,
     },
   ];
 }
@@ -209,14 +246,14 @@ function MetricBar({ metric }: { metric: Metric }) {
         <div className="text-right">
           <p className="text-xl font-black text-slate-950">{metric.value}</p>
           <p className="mt-1 text-[11px] font-bold text-slate-500">
-            {getConcernLabel(metric.score)}
+            {metric.measured ? getConcernLabel(metric.score) : "미완료"}
           </p>
         </div>
       </div>
       <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100">
         <div
-          className={`h-full rounded-full ${toneClass[metric.tone]}`}
-          style={{ width: `${clamp(metric.score)}%` }}
+          className={`h-full rounded-full ${metric.measured ? toneClass[metric.tone] : "bg-slate-300"}`}
+          style={{ width: `${metric.measured ? clamp(metric.score) : 100}%` }}
         />
       </div>
     </div>
@@ -494,8 +531,12 @@ export default function ReportDetailPage() {
 
   const metrics = useMemo(() => (report ? buildMetrics(report) : []), [report]);
   const totalScore = useMemo(() => {
-    if (!metrics.length) return 0;
-    return Math.round(metrics.reduce((sum, metric) => sum + metric.score, 0) / metrics.length);
+    const measuredMetrics = metrics.filter((metric) => metric.measured);
+    if (!measuredMetrics.length) return 0;
+
+    return Math.round(
+      measuredMetrics.reduce((sum, metric) => sum + metric.score, 0) / measuredMetrics.length,
+    );
   }, [metrics]);
   const trimmedReviewContent = reviewContent.trim();
 
