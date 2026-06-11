@@ -21,9 +21,27 @@ export type NormalizedReportMetrics = {
   final_risk_level: string;
 };
 
+export type RiskScoreSnapshot = {
+  inattention: number;
+  hyperactivity: number;
+  omission: number;
+  impulsivity: number;
+  gaze: number;
+  movement: number;
+  survey: number;
+  behavior: number;
+  total: number;
+};
+
+const CPT_TOTAL_TRIALS = 20;
+
 function toNumber(value: unknown, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function clamp(value: number, min = 0, max = 100) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function toJsonObject(value: unknown) {
@@ -85,4 +103,43 @@ export function buildMetricProfileText(metrics: NormalizedReportMetrics) {
 
 export function buildMetricEmbeddingInput(metrics: NormalizedReportMetrics) {
   return `task: sentence similarity | query: ${buildMetricProfileText(metrics)}`;
+}
+
+export function buildRiskScoreSnapshot(metrics: NormalizedReportMetrics): RiskScoreSnapshot {
+  const cptHitCount = metrics.cpt_attention ?? 0;
+  const cptOmitCount = metrics.inattention_count ?? 0;
+  const cptTargetCount = cptHitCount + cptOmitCount;
+  const cptNonTargetCount = Math.max(0, CPT_TOTAL_TRIALS - cptTargetCount);
+
+  const inattention = clamp((metrics.inattention_count / 9) * 100);
+  const hyperactivity = clamp((metrics.hyperactivity_count / 9) * 100);
+  const omission = cptTargetCount > 0 ? clamp((cptOmitCount / cptTargetCount) * 100) : 0;
+  const impulsivity = cptNonTargetCount > 0
+    ? clamp((metrics.cpt_impulsivity / cptNonTargetCount) * 100)
+    : 0;
+  const gaze = clamp(metrics.gaze_off_task_ratio);
+  const movement = clamp(
+    Math.round(
+      metrics.head_rotation_variability * 2.8 +
+        Math.max(0, 85 - metrics.head_pose_forward_ratio) * 0.7 +
+        Math.max(0, 75 - metrics.head_attention_score_adjusted) * 0.6,
+    ),
+  );
+  const survey = Math.round((inattention + hyperactivity) / 2);
+  const behavior = Math.round((omission + impulsivity + gaze + movement) / 4);
+  const total = Math.round(
+    (inattention + hyperactivity + omission + impulsivity + gaze + movement) / 6,
+  );
+
+  return {
+    inattention: Math.round(inattention),
+    hyperactivity: Math.round(hyperactivity),
+    omission: Math.round(omission),
+    impulsivity: Math.round(impulsivity),
+    gaze: Math.round(gaze),
+    movement: Math.round(movement),
+    survey,
+    behavior,
+    total,
+  };
 }

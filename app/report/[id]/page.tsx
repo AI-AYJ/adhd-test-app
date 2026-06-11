@@ -20,6 +20,10 @@ type ReportData = {
   head_rotation_variability?: number | null;
   head_pose_forward_ratio?: number | null;
   head_attention_score_adjusted?: number | null;
+  risk_score?: number | null;
+  survey_risk_score?: number | null;
+  behavior_risk_score?: number | null;
+  baseline_visualization?: BaselineVisualization | null;
 };
 
 type StoredReview = {
@@ -38,6 +42,24 @@ type Metric = {
   detail: string;
   score: number;
   tone: MetricTone;
+};
+
+type RiskPoint = {
+  id: string;
+  survey_risk_score: number;
+  behavior_risk_score: number;
+  risk_score: number;
+};
+
+type BaselineVisualization = {
+  current: RiskPoint;
+  baseline: RiskPoint[];
+  baseline_count: number;
+  mean: {
+    survey_risk_score: number;
+    behavior_risk_score: number;
+    risk_score: number;
+  };
 };
 
 const toneClass: Record<MetricTone, string> = {
@@ -198,6 +220,179 @@ function MetricBar({ metric }: { metric: Metric }) {
         />
       </div>
     </div>
+  );
+}
+
+function toPlotValue(value: number) {
+  return clamp(Number.isFinite(value) ? value : 0);
+}
+
+function BaselinePositionScatter({
+  visualization,
+}: {
+  visualization?: BaselineVisualization | null;
+}) {
+  if (!visualization || !visualization.baseline.length) {
+    return null;
+  }
+
+  const left = 52;
+  const top = 24;
+  const plotWidth = 292;
+  const plotHeight = 188;
+  const right = left + plotWidth;
+  const bottom = top + plotHeight;
+  const toX = (value: number) => left + (toPlotValue(value) / 100) * plotWidth;
+  const toY = (value: number) => top + ((100 - toPlotValue(value)) / 100) * plotHeight;
+  const current = visualization.current;
+  const mean = visualization.mean;
+  const currentX = toX(current.behavior_risk_score);
+  const currentY = toY(current.survey_risk_score);
+  const meanX = toX(mean.behavior_risk_score);
+  const meanY = toY(mean.survey_risk_score);
+
+  return (
+    <section className="fast-report-panel mt-6 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-amber-500">
+            Baseline Map
+          </p>
+          <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950">
+            표본 50명 대비 현재 위치
+          </h2>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
+            검은 점은 기존 표본 데이터, 노란 점은 현재 결과입니다. 빨간 기준선은 표본 평균이며
+            의학적 진단 기준이 아니라 현재 데이터 안에서의 상대 위치를 보여줍니다.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-slate-500">
+          <div className="rounded-2xl bg-slate-50 px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">표본</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{visualization.baseline_count}</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">설문</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{current.survey_risk_score}</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">수행</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{current.behavior_risk_score}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50">
+        <svg
+          viewBox="0 0 380 258"
+          role="img"
+          aria-label="표본 50명 대비 설문 위험도와 디지털 수행 위험도 산점도"
+          className="h-auto w-full bg-white"
+        >
+          <rect x={left} y={top} width={plotWidth} height={plotHeight} fill="#f8fafc" />
+          {[0, 25, 50, 75, 100].map((tick) => (
+            <g key={`grid-${tick}`}>
+              <line
+                x1={toX(tick)}
+                y1={top}
+                x2={toX(tick)}
+                y2={bottom}
+                stroke="#e2e8f0"
+                strokeWidth="1"
+              />
+              <line
+                x1={left}
+                y1={toY(tick)}
+                x2={right}
+                y2={toY(tick)}
+                stroke="#e2e8f0"
+                strokeWidth="1"
+              />
+            </g>
+          ))}
+          <line x1={left} y1={bottom} x2={right} y2={bottom} stroke="#0f172a" strokeWidth="2" />
+          <line x1={left} y1={top} x2={left} y2={bottom} stroke="#0f172a" strokeWidth="2" />
+          <line
+            x1={left}
+            y1={meanY}
+            x2={right}
+            y2={meanY}
+            stroke="#ef4444"
+            strokeDasharray="5 5"
+            strokeWidth="1.5"
+            opacity="0.8"
+          />
+          <line
+            x1={meanX}
+            y1={top}
+            x2={meanX}
+            y2={bottom}
+            stroke="#ef4444"
+            strokeDasharray="5 5"
+            strokeWidth="1.5"
+            opacity="0.8"
+          />
+
+          {visualization.baseline.map((point, index) => (
+            <circle
+              key={`${point.id}-${index}`}
+              cx={toX(point.behavior_risk_score)}
+              cy={toY(point.survey_risk_score)}
+              r="3.2"
+              fill="#0f172a"
+              opacity="0.24"
+            />
+          ))}
+
+          <circle cx={currentX} cy={currentY} r="12" fill="#facc15" opacity="0.25" />
+          <circle cx={currentX} cy={currentY} r="7" fill="#facc15" stroke="#0f172a" strokeWidth="2" />
+          <text
+            x={Math.min(currentX + 12, right - 44)}
+            y={Math.max(currentY - 12, top + 14)}
+            fill="#0f172a"
+            fontSize="11"
+            fontWeight="800"
+          >
+            현재
+          </text>
+
+          <text x={left - 12} y={top + 8} textAnchor="end" fill="#475569" fontSize="11" fontWeight="800">
+            설문 위험도
+          </text>
+          <text x={right} y={bottom + 28} textAnchor="end" fill="#475569" fontSize="11" fontWeight="800">
+            디지털 수행 위험도
+          </text>
+          <text x={left} y={bottom + 18} textAnchor="middle" fill="#94a3b8" fontSize="10">
+            0
+          </text>
+          <text x={right} y={bottom + 18} textAnchor="middle" fill="#94a3b8" fontSize="10">
+            100
+          </text>
+          <text x={left - 14} y={bottom + 3} textAnchor="end" fill="#94a3b8" fontSize="10">
+            0
+          </text>
+          <text x={left - 14} y={top + 4} textAnchor="end" fill="#94a3b8" fontSize="10">
+            100
+          </text>
+        </svg>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-3 text-xs font-bold text-slate-500">
+        <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-slate-950 opacity-40" />
+          표본 데이터
+        </span>
+        <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-2 text-amber-700">
+          <span className="h-2.5 w-2.5 rounded-full border border-slate-950 bg-amber-300" />
+          현재 결과
+        </span>
+        <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-2 text-rose-600">
+          <span className="h-px w-5 border-t border-dashed border-rose-500" />
+          표본 평균선
+        </span>
+      </div>
+    </section>
   );
 }
 
@@ -375,6 +570,8 @@ export default function ReportDetailPage() {
             <MetricBar key={metric.label} metric={metric} />
           ))}
         </section>
+
+        <BaselinePositionScatter visualization={report.baseline_visualization} />
 
         <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
           <article className="fast-report-panel rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">

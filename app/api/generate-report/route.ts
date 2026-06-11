@@ -4,6 +4,7 @@ import { ADHD_REPORT_SYSTEM_PROMPT } from "@/lib/prompts/adhdReportSystemPrompt"
 import {
   buildMetricEmbeddingInput,
   buildMetricProfileText,
+  buildRiskScoreSnapshot,
   normalizeReportMetrics,
   type NormalizedReportMetrics,
 } from "@/lib/screeningProfile";
@@ -265,6 +266,7 @@ export async function POST(req: Request) {
     const body = (await req.json()) as Record<string, unknown>;
     stage = "normalize-metrics";
     const metrics = normalizeReportMetrics(body);
+    const riskScores = buildRiskScoreSnapshot(metrics);
 
     stage = "generate-report";
     const generated = await generateReportWithLLM(metrics);
@@ -277,6 +279,11 @@ export async function POST(req: Request) {
         ...metrics,
         report: generated.report,
         metric_snapshot: metrics,
+        risk_scores: riskScores,
+        risk_score: riskScores.total,
+        survey_risk_score: riskScores.survey,
+        behavior_risk_score: riskScores.behavior,
+        profile_type: "user",
         embedding: generated.metricEmbedding,
         embedding_model: process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001",
       })

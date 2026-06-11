@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  buildRiskScoreSnapshot,
+  normalizeReportMetrics,
+} from "@/lib/screeningProfile";
 import { supabase } from "@/lib/supabase";
 
 function toNumber(value: unknown, fallback = 0) {
@@ -20,33 +24,82 @@ function getKoreanTimestamp() {
 }
 
 function buildAnalyzePayload(body: Record<string, unknown>) {
-  const headRotationVariability = toNumber(
-    body.head_rotation_variability ?? body.head_movement_variability,
-  );
+  const metrics = normalizeReportMetrics({
+    ...body,
+    final_risk_level: toNonEmptyString(body.final_risk_level, "분석 대기"),
+  });
+  const riskScores = buildRiskScoreSnapshot(metrics);
 
   return {
     created_at: getKoreanTimestamp(),
-    inattention_count: toNumber(body.inattention_count),
-    hyperactivity_count: toNumber(body.hyperactivity_count),
-    cpt_attention: toNumber(body.cpt_attention),
-    cpt_timeliness: toNumber(body.cpt_timeliness),
-    cpt_impulsivity: toNumber(body.cpt_impulsivity),
-    cpt_hyperactivity: toNumber(body.cpt_hyperactivity),
-    gaze_off_task_ratio: toNumber(body.gaze_off_task_ratio),
-    head_movement_variability: headRotationVariability,
-    head_pose_forward_ratio: toNumber(body.head_pose_forward_ratio),
-    head_pose_left_ratio: toNumber(body.head_pose_left_ratio),
-    head_pose_right_ratio: toNumber(body.head_pose_right_ratio),
-    head_pose_down_ratio: toNumber(body.head_pose_down_ratio),
-    head_yaw_std: toNumber(body.head_yaw_std),
-    head_pitch_std: toNumber(body.head_pitch_std),
-    head_roll_std: toNumber(body.head_roll_std),
-    head_rotation_variability: headRotationVariability,
-    head_attention_score: toNumber(body.head_attention_score),
-    head_attention_score_adjusted: toNumber(body.head_attention_score_adjusted),
+    ...metrics,
     head_pose_raw: toJsonObject(body.head_pose_raw),
-    final_risk_level: toNonEmptyString(body.final_risk_level, "분석 대기"),
+    risk_scores: riskScores,
+    risk_score: riskScores.total,
+    survey_risk_score: riskScores.survey,
+    behavior_risk_score: riskScores.behavior,
+    profile_type: "user",
     report: toNonEmptyString(body.report, "리포트 생성 대기 중"),
+  };
+}
+
+function toRiskPoint(row: Record<string, unknown>) {
+  const fallbackScores = buildRiskScoreSnapshot(normalizeReportMetrics(row));
+  const surveyRiskScore = toNumber(row.survey_risk_score, fallbackScores.survey);
+  const behaviorRiskScore = toNumber(row.behavior_risk_score, fallbackScores.behavior);
+  const riskScore = toNumber(row.risk_score, fallbackScores.total);
+
+  return {
+    id: typeof row.id === "string" ? row.id : "",
+    survey_risk_score: Math.round(surveyRiskScore),
+    behavior_risk_score: Math.round(behaviorRiskScore),
+    risk_score: Math.round(riskScore),
+  };
+}
+
+function average(values: number[]) {
+  return values.length
+    ? values.reduce((sum, value) => sum + value, 0) / values.length
+    : 0;
+}
+
+async function buildBaselineVisualization(currentRow: Record<string, unknown>) {
+  const { data, error } = await supabase
+    .from("user_results")
+    .select("id, survey_risk_score, behavior_risk_score, risk_score")
+    .eq("profile_type", "baseline")
+    .not("survey_risk_score", "is", null)
+    .not("behavior_risk_score", "is", null)
+    .order("created_at", { ascending: true })
+    .limit(50);
+
+  if (error) {
+    console.error("Baseline visualization retrieval failed in /api/analyze:", error);
+    return null;
+  }
+
+  const baseline = ((data ?? []) as unknown as Record<string, unknown>[])
+    .map(toRiskPoint)
+    .filter((point) => point.id);
+
+  if (!baseline.length) {
+    return null;
+  }
+
+  const current = toRiskPoint(currentRow);
+  const meanBehavior = average(baseline.map((point) => point.behavior_risk_score));
+  const meanSurvey = average(baseline.map((point) => point.survey_risk_score));
+  const meanTotal = average(baseline.map((point) => point.risk_score));
+
+  return {
+    current,
+    baseline,
+    baseline_count: baseline.length,
+    mean: {
+      survey_risk_score: Math.round(meanSurvey),
+      behavior_risk_score: Math.round(meanBehavior),
+      risk_score: Math.round(meanTotal),
+    },
   };
 }
 
@@ -68,7 +121,15 @@ export async function GET(req: Request) {
       );
     }
 
-    return NextResponse.json({ success: true, data });``
+    const visualization = await buildBaselineVisualization(data as Record<string, unknown>);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...data,
+        baseline_visualization: visualization,
+      },
+    });
   }
 
   const { data, error } = await supabase

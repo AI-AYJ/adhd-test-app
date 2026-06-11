@@ -2,8 +2,31 @@ create extension if not exists vector;
 
 alter table public.user_results
   add column if not exists metric_snapshot jsonb,
+  add column if not exists risk_scores jsonb,
+  add column if not exists risk_score numeric,
+  add column if not exists survey_risk_score numeric,
+  add column if not exists behavior_risk_score numeric,
+  add column if not exists profile_type text,
   add column if not exists embedding vector(768),
   add column if not exists embedding_model text;
+
+with ordered_results as (
+  select
+    id,
+    row_number() over (order by created_at asc, id asc) as row_number
+  from public.user_results
+)
+update public.user_results as ur
+set profile_type = case
+  when ordered_results.row_number <= 50 then 'baseline'
+  else 'user'
+end
+from ordered_results
+where ur.id = ordered_results.id
+  and ur.profile_type is null;
+
+alter table public.user_results
+  alter column profile_type set default 'user';
 
 create index if not exists user_results_embedding_ivfflat_idx
   on public.user_results
@@ -59,6 +82,7 @@ as $$
     ur.head_attention_score_adjusted::double precision
   from public.user_results ur
   where ur.embedding is not null
+    and ur.profile_type = 'baseline'
     and ur.report is not null
     and char_length(trim(ur.report)) > 0
     and (exclude_result_id is null or ur.id <> exclude_result_id)

@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { requestGEMINIEmbedding } from "@/lib/gemini";
 import {
-  buildMetricEmbeddingInput,
   buildRiskScoreSnapshot,
   normalizeReportMetrics,
 } from "@/lib/screeningProfile";
@@ -38,8 +36,8 @@ function authorizeBackfill(req: Request) {
 }
 
 function normalizeLimit(value: unknown) {
-  const parsed = Number(value ?? 20);
-  return Number.isFinite(parsed) ? Math.min(Math.max(Math.round(parsed), 1), 50) : 20;
+  const parsed = Number(value ?? 100);
+  return Number.isFinite(parsed) ? Math.min(Math.max(Math.round(parsed), 1), 200) : 100;
 }
 
 export async function POST(req: Request) {
@@ -57,6 +55,7 @@ export async function POST(req: Request) {
     .select(
       [
         "id",
+        "created_at",
         "inattention_count",
         "hyperactivity_count",
         "cpt_attention",
@@ -77,11 +76,11 @@ export async function POST(req: Request) {
         "head_attention_score_adjusted",
         "head_pose_raw",
         "final_risk_level",
-        "report",
+        "risk_score",
+        "profile_type",
       ].join(","),
     )
-    .is("embedding", null)
-    .not("report", "is", null)
+    .or("risk_score.is.null,survey_risk_score.is.null,behavior_risk_score.is.null")
     .order("created_at", { ascending: true })
     .limit(limit);
 
@@ -92,21 +91,25 @@ export async function POST(req: Request) {
   const rows = (data ?? []) as unknown as BackfillRow[];
   const results: Array<{ id: string; success: boolean; error?: string }> = [];
 
-  for (const row of rows) {
+  for (const [index, row] of rows.entries()) {
     try {
       const metrics = normalizeReportMetrics(row);
       const riskScores = buildRiskScoreSnapshot(metrics);
-      const embedding = await requestGEMINIEmbedding(buildMetricEmbeddingInput(metrics));
+      const profileType =
+        typeof row.profile_type === "string" && row.profile_type.trim()
+          ? row.profile_type
+          : index < 50
+            ? "baseline"
+            : "user";
+
       const { error: updateError } = await supabase
         .from("user_results")
         .update({
-          metric_snapshot: metrics,
           risk_scores: riskScores,
           risk_score: riskScores.total,
           survey_risk_score: riskScores.survey,
           behavior_risk_score: riskScores.behavior,
-          embedding,
-          embedding_model: process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001",
+          profile_type: profileType,
         })
         .eq("id", row.id);
 
