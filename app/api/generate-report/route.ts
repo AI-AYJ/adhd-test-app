@@ -1,30 +1,13 @@
 import { NextResponse } from "next/server";
 import { requestGEMINIEmbedding, requestGEMINILLM } from "@/lib/gemini";
 import { ADHD_REPORT_SYSTEM_PROMPT } from "@/lib/prompts/adhdReportSystemPrompt";
+import {
+  buildMetricEmbeddingInput,
+  buildMetricProfileText,
+  normalizeReportMetrics,
+  type NormalizedReportMetrics,
+} from "@/lib/screeningProfile";
 import { supabase, supabaseUrl } from "@/lib/supabase";
-
-type NormalizedReportMetrics = {
-  inattention_count: number;
-  hyperactivity_count: number;
-  cpt_attention: number;
-  cpt_timeliness: number;
-  cpt_impulsivity: number;
-  cpt_hyperactivity: number;
-  gaze_off_task_ratio: number;
-  head_movement_variability: number;
-  head_pose_forward_ratio: number;
-  head_pose_left_ratio: number;
-  head_pose_right_ratio: number;
-  head_pose_down_ratio: number;
-  head_yaw_std: number;
-  head_pitch_std: number;
-  head_roll_std: number;
-  head_rotation_variability: number;
-  head_attention_score: number;
-  head_attention_score_adjusted: number;
-  head_pose_raw: Record<string, unknown> | null;
-  final_risk_level: string;
-};
 
 type GeminiResponse = {
   candidates?: Array<{
@@ -50,70 +33,32 @@ type RagMatch = {
   similarity?: number | null;
 };
 
-function toNumber(value: unknown, fallback = 0) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function toJsonObject(value: unknown) {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
-}
+type SimilarReportMatch = {
+  id?: string | null;
+  final_risk_level?: string | null;
+  report?: string | null;
+  metric_snapshot?: Record<string, unknown> | null;
+  similarity?: number | null;
+  inattention_count?: number | null;
+  hyperactivity_count?: number | null;
+  cpt_attention?: number | null;
+  cpt_timeliness?: number | null;
+  cpt_impulsivity?: number | null;
+  cpt_hyperactivity?: number | null;
+  gaze_off_task_ratio?: number | null;
+  head_movement_variability?: number | null;
+  head_rotation_variability?: number | null;
+  head_pose_forward_ratio?: number | null;
+  head_attention_score_adjusted?: number | null;
+};
 
 function getKoreanTimestamp() {
   const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
   return kst.toISOString().replace("T", " ").replace("Z", "");
 }
 
-function normalizeMetrics(body: Record<string, unknown>): NormalizedReportMetrics {
-  const headRotationVariability = toNumber(
-    body.head_rotation_variability ?? body.head_movement_variability,
-  );
-
-  return {
-    inattention_count: toNumber(body.inattention_count),
-    hyperactivity_count: toNumber(body.hyperactivity_count),
-    cpt_attention: toNumber(body.cpt_attention),
-    cpt_timeliness: toNumber(body.cpt_timeliness),
-    cpt_impulsivity: toNumber(body.cpt_impulsivity),
-    cpt_hyperactivity: toNumber(body.cpt_hyperactivity),
-    gaze_off_task_ratio: toNumber(body.gaze_off_task_ratio),
-    head_movement_variability: headRotationVariability,
-    head_pose_forward_ratio: toNumber(body.head_pose_forward_ratio),
-    head_pose_left_ratio: toNumber(body.head_pose_left_ratio),
-    head_pose_right_ratio: toNumber(body.head_pose_right_ratio),
-    head_pose_down_ratio: toNumber(body.head_pose_down_ratio),
-    head_yaw_std: toNumber(body.head_yaw_std),
-    head_pitch_std: toNumber(body.head_pitch_std),
-    head_roll_std: toNumber(body.head_roll_std),
-    head_rotation_variability: headRotationVariability,
-    head_attention_score: toNumber(body.head_attention_score),
-    head_attention_score_adjusted: toNumber(body.head_attention_score_adjusted),
-    head_pose_raw: toJsonObject(body.head_pose_raw),
-    final_risk_level:
-      typeof body.final_risk_level === "string" && body.final_risk_level.trim()
-        ? body.final_risk_level
-        : "분석 완료",
-  };
-}
-
 function buildRagQuery(metrics: NormalizedReportMetrics) {
-  return [
-    `ASRS 부주의 응답 수: ${metrics.inattention_count}`,
-    `ASRS 과잉행동 및 충동성 응답 수: ${metrics.hyperactivity_count}`,
-    `CPT 주의 지표: ${metrics.cpt_attention}`,
-    `CPT 반응 속도 및 일관성 지표: ${metrics.cpt_timeliness}`,
-    `CPT 충동성 지표: ${metrics.cpt_impulsivity}`,
-    `CPT 과잉행동 보조 지표: ${metrics.cpt_hyperactivity}`,
-    `시선 이탈 비율: ${metrics.gaze_off_task_ratio}`,
-    `머리 움직임 변동성: ${metrics.head_movement_variability}`,
-    `머리 회전 변동성: ${metrics.head_rotation_variability}`,
-    `정면 유지 비율: ${metrics.head_pose_forward_ratio}`,
-    `보정 집중도: ${metrics.head_attention_score_adjusted}`,
-    `좌측 회전 비율: ${metrics.head_pose_left_ratio}`,
-    `우측 회전 비율: ${metrics.head_pose_right_ratio}`,
-    `하방 회전 비율: ${metrics.head_pose_down_ratio}`,
-    `시스템 1차 참고 위험도: ${metrics.final_risk_level}`,
-  ].join("\n");
+  return buildMetricProfileText(metrics);
 }
 
 function formatRetrievedContext(matches: RagMatch[]) {
@@ -146,18 +91,111 @@ async function retrieveRagContext(metrics: NormalizedReportMetrics) {
   return formatRetrievedContext((data ?? []) as RagMatch[]);
 }
 
-function buildReportPrompt(metrics: NormalizedReportMetrics, retrievedContext: string) {
+function sanitizeReportText(text: string, maxLength = 900) {
+  const normalized = text
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, maxLength)}...`;
+}
+
+function formatSimilarity(value: unknown) {
+  const similarity = Number(value);
+  return Number.isFinite(similarity) ? `${Math.round(similarity * 100)}%` : "계산 불가";
+}
+
+function readMetric(match: SimilarReportMatch, key: keyof NormalizedReportMetrics) {
+  const snapshotValue = match.metric_snapshot?.[key];
+  const directValue = match[key as keyof SimilarReportMatch];
+  const value = snapshotValue ?? directValue;
+  return value === null || value === undefined || value === "" ? "없음" : String(value);
+}
+
+function formatSimilarReportContext(matches: SimilarReportMatch[]) {
+  return matches
+    .filter((match) => typeof match.report === "string" && match.report.trim())
+    .map((match, index) => {
+      return `[유사 리포트 ${index + 1}]
+유사도: ${formatSimilarity(match.similarity)}
+시스템 1차 참고 위험도: ${match.final_risk_level || "없음"}
+지표 요약:
+- ASRS 부주의 응답 수: ${readMetric(match, "inattention_count")}
+- ASRS 과잉행동 및 충동성 응답 수: ${readMetric(match, "hyperactivity_count")}
+- CPT 주의 지표: ${readMetric(match, "cpt_attention")}
+- CPT 반응 속도 및 일관성 지표: ${readMetric(match, "cpt_timeliness")}
+- CPT 충동성 지표: ${readMetric(match, "cpt_impulsivity")}
+- CPT 과잉행동 보조 지표: ${readMetric(match, "cpt_hyperactivity")}
+- 시선 이탈 비율: ${readMetric(match, "gaze_off_task_ratio")}
+- 머리 움직임 변동성: ${readMetric(match, "head_movement_variability")}
+- 머리 회전 변동성: ${readMetric(match, "head_rotation_variability")}
+- 정면 유지 비율: ${readMetric(match, "head_pose_forward_ratio")}
+- 보정 집중도: ${readMetric(match, "head_attention_score_adjusted")}
+기존 리포트 핵심 내용:
+${sanitizeReportText(match.report || "")}`;
+    })
+    .join("\n\n");
+}
+
+function getSimilarReportMatchConfig() {
+  const matchCount = Number(process.env.SIMILAR_REPORT_MATCH_COUNT ?? 4);
+  const matchThreshold = Number(process.env.SIMILAR_REPORT_MATCH_THRESHOLD ?? 0.15);
+
+  return {
+    matchCount: Number.isFinite(matchCount) ? Math.min(Math.max(Math.round(matchCount), 1), 8) : 4,
+    matchThreshold: Number.isFinite(matchThreshold) ? matchThreshold : 0.15,
+  };
+}
+
+async function retrieveSimilarReportContext(metrics: NormalizedReportMetrics) {
+  const metricEmbedding = await requestGEMINIEmbedding(buildMetricEmbeddingInput(metrics));
+  const { matchCount, matchThreshold } = getSimilarReportMatchConfig();
+
+  const { data, error } = await supabase.rpc("match_similar_user_reports", {
+    query_embedding: metricEmbedding,
+    match_count: matchCount,
+    match_threshold: matchThreshold,
+    exclude_result_id: null,
+  });
+
+  if (error) {
+    console.error("Similar report retrieval failed in /api/generate-report:", error);
+    return { context: "", embedding: metricEmbedding };
+  }
+
+  return {
+    context: formatSimilarReportContext((data ?? []) as SimilarReportMatch[]),
+    embedding: metricEmbedding,
+  };
+}
+
+function buildReportPrompt(
+  metrics: NormalizedReportMetrics,
+  retrievedContext: string,
+  similarReportContext: string,
+) {
   return `다음 입력을 바탕으로 ADHD 스크리닝 리포트를 작성해 주세요.
 
-입력:
+현재 사용자 입력:
 ${JSON.stringify(metrics, null, 2)}
 
-RAG 참고 문맥:
+논문/해석 기준 RAG 참고 문맥:
 ${retrievedContext || "없음"}
 
+유사한 과거 리포트 참고 문맥:
+${similarReportContext || "없음"}
+
 주의:
+- 현재 사용자 입력을 가장 우선하세요.
 - 입력에 없는 값은 만들지 마세요.
 - RAG 참고 문맥이 있으면 우선 반영하되, 진단처럼 표현하지 마세요.
+- 유사한 과거 리포트는 해석 일관성을 높이는 내부 참고 자료로만 사용하세요.
+- 최종 리포트에서 "유사 리포트", "과거 사례", "참고 사례"를 직접 언급하지 마세요.
+- 과거 리포트 문장을 그대로 복사하지 마세요.
 - 모든 문단은 <p>...</p> HTML 형식으로 작성하세요.
 - 사용자를 ADHD로 진단하지 말고, 선별검사 결과와 가능성 중심으로 설명하세요.
 - 머리 회전 변동성은 과제 중 자세 변화의 일관성을 보여주는 보조 지표로 설명하세요.
@@ -199,8 +237,11 @@ function ensureHtmlParagraphs(text: string) {
 }
 
 async function generateReportWithLLM(metrics: NormalizedReportMetrics) {
-  const retrievedContext = await retrieveRagContext(metrics);
-  const prompt = buildReportPrompt(metrics, retrievedContext);
+  const [retrievedContext, similarReportResult] = await Promise.all([
+    retrieveRagContext(metrics),
+    retrieveSimilarReportContext(metrics),
+  ]);
+  const prompt = buildReportPrompt(metrics, retrievedContext, similarReportResult.context);
   const data = await requestGEMINILLM({
     prompt,
     systemInstruction: ADHD_REPORT_SYSTEM_PROMPT,
@@ -211,7 +252,10 @@ async function generateReportWithLLM(metrics: NormalizedReportMetrics) {
     topP: 0.9,
   });
 
-  return ensureHtmlParagraphs(extractTextFromLLMResponse(data));
+  return {
+    report: ensureHtmlParagraphs(extractTextFromLLMResponse(data)),
+    metricEmbedding: similarReportResult.embedding,
+  };
 }
 
 export async function POST(req: Request) {
@@ -220,10 +264,10 @@ export async function POST(req: Request) {
   try {
     const body = (await req.json()) as Record<string, unknown>;
     stage = "normalize-metrics";
-    const metrics = normalizeMetrics(body);
+    const metrics = normalizeReportMetrics(body);
 
     stage = "generate-report";
-    const report = await generateReportWithLLM(metrics);
+    const generated = await generateReportWithLLM(metrics);
 
     stage = "save-report";
     const { data, error } = await supabase
@@ -231,7 +275,10 @@ export async function POST(req: Request) {
       .insert({
         created_at: getKoreanTimestamp(),
         ...metrics,
-        report,
+        report: generated.report,
+        metric_snapshot: metrics,
+        embedding: generated.metricEmbedding,
+        embedding_model: process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001",
       })
       .select()
       .single();
