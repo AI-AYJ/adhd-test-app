@@ -266,16 +266,12 @@ function BaselinePositionScatter({
       return score >= bin.min && score <= bin.max;
     }).length,
   }));
-  const smoothedCounts = densityBins.map((bin, index) => {
-    const prev = densityBins[index - 1]?.count ?? bin.count;
-    const next = densityBins[index + 1]?.count ?? bin.count;
-    return prev * 0.25 + bin.count * 0.5 + next * 0.25;
-  });
-  const maxDensity = Math.max(...smoothedCounts, 1);
-  const curvePoints = smoothedCounts.map((count, index) => {
-    const x = curveLeft + (index / Math.max(1, smoothedCounts.length - 1)) * curveWidth;
+  const densityCounts = densityBins.map((bin) => bin.count);
+  const maxDensity = Math.max(...densityCounts, 1);
+  const curvePoints = densityCounts.map((count, index) => {
+    const x = curveLeft + (index / Math.max(1, densityCounts.length - 1)) * curveWidth;
     const y = curveBottom - (count / maxDensity) * (curveHeight - 18);
-    return { x, y };
+    return { x, y, count };
   });
   const curvePath = curvePoints
     .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
@@ -283,7 +279,7 @@ function BaselinePositionScatter({
   const areaPath = `${curvePath} L ${curveLeft + curveWidth} ${curveBottom} L ${curveLeft} ${curveBottom} Z`;
   const currentX = curveLeft + (toPlotValue(current.risk_score) / 100) * curveWidth;
   const currentBinIndex = Math.min(
-    smoothedCounts.length - 1,
+    densityCounts.length - 1,
     Math.max(0, Math.floor(toPlotValue(current.risk_score) / 10)),
   );
   const currentDensityY = curvePoints[currentBinIndex]?.y ?? curveBottom;
@@ -306,8 +302,8 @@ function BaselinePositionScatter({
               표본 대비 위치
             </h2>
             <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
-              표본 50명의 최종 점수 분포를 부드러운 곡선으로 보여줍니다. 노란 마커는 현재
-              결과의 위치입니다.
+              표본 50명의 최종 점수 구간 분포를 곡선으로 보여줍니다. 노란 마커는 현재 결과의
+              위치입니다.
             </p>
           </div>
 
@@ -402,15 +398,6 @@ function BaselinePositionScatter({
                 strokeWidth="1.6"
                 opacity="0.72"
               />
-              <text
-                x={Math.min(meanX + 8, curveLeft + curveWidth - 58)}
-                y={curveTop + 22}
-                fill="#ef4444"
-                fontSize="11"
-                fontWeight="800"
-              >
-                평균 {mean.risk_score}
-              </text>
               <line
                 x1={currentX}
                 y1={curveBottom}
@@ -429,15 +416,6 @@ function BaselinePositionScatter({
                 stroke="#0f172a"
                 strokeWidth="2"
               />
-              <text
-                x={Math.min(currentX + 16, curveLeft + curveWidth - 62)}
-                y={Math.max(Math.min(currentDensityY - 28, curveBottom - 60), curveTop + 18)}
-                fill="#0f172a"
-                fontSize="12"
-                fontWeight="800"
-              >
-                현재 {current.risk_score}
-              </text>
               <text x={curveLeft} y={curveTop + 10} fill="#64748b" fontSize="11" fontWeight="800">
                 표본 밀도
               </text>
