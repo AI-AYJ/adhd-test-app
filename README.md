@@ -8,6 +8,9 @@ FAST는 성인 ADHD를 의심하는 사용자가 병원 방문 전 자신의 주
 
 본 프로젝트는 건양대학교 인공지능학과 캡스톤디자인 프로젝트로 개발되었습니다..
 
+<img width="1232" height="627" alt="image" src="https://github.com/user-attachments/assets/2819cb79-e487-40a6-a8b5-10bc0e221bf9" />
+
+
 ---
 
 ## Live Demo
