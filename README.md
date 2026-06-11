@@ -1,4 +1,6 @@
-# FAST: ADHD Screening Web
+# <img width="207" height="54" alt="image" src="https://github.com/user-attachments/assets/3e121577-0950-4498-9e47-b8e3069a0d45" /> 
+FAST: ADHD Screening Web
+
 
 > 웹캠 기반 행동 분석과 LLM 리포트를 결합한 성인 ADHD 초기 스크리닝 웹 서비스
 
@@ -6,10 +8,7 @@ FAST는 성인 ADHD를 의심하는 사용자가 병원 방문 전 자신의 주
 
 사용자는 웹에서 자가보고 설문과 CPT 기반 주의력 과제를 수행하고, 검사 중 나타나는 반응 패턴, 시선 이탈, 머리 움직임 등의 디지털 바이오마커를 바탕으로 결과 리포트를 확인할 수 있습니다.
 
-본 프로젝트는 건양대학교 인공지능학과 캡스톤디자인 프로젝트로 개발되었습니다..
-
-<img width="1199" height="629" alt="캡스톤디자인_시스템아키텍처" src="https://github.com/user-attachments/assets/0a17de8e-9951-4d4d-91e8-5f4dd20fc170" />
-
+본 프로젝트는 건양대학교 인공지능학과 캡스톤디자인 프로젝트로 개발되었습니다.
 
 ---
 
@@ -27,9 +26,12 @@ FAST는 이러한 접근 장벽을 낮추기 위해, 별도의 장비 없이 웹
 
 단순 설문 결과만 보여주는 것이 아니라, 검사 중 사용자의 반응과 행동 데이터를 함께 분석하여 더 직관적인 결과 리포트를 제공하는 것이 특징입니다.
 
+<img width="1217" height="519" alt="image" src="https://github.com/user-attachments/assets/37b10afa-b951-4e96-9df2-641e4984f355" />
+
+
 ---
 
-## Key Features
+## 📌 Key Features
 
 ### Self-Report Survey
 
@@ -103,7 +105,7 @@ FAST는 다음과 같은 흐름으로 구성됩니다.
 
 ---
 
-## Getting Started
+## 🙌  Getting Started
 
 ### 1. Clone Repository
 
@@ -141,17 +143,6 @@ FAST는 의료 진단 도구가 아닙니다.
 
 또한 웹캠 영상은 저장, 녹화, 업로드되지 않으며, 검사 중 실시간 지표 계산을 위해서만 사용됩니다.
 
----
-
-## Team
-
-건양대학교 인공지능학과 캡스톤디자인 팀 SPJ Lab
-
-| Name | Role                              |
-| ---- | --------------------------------- |
-| 박서현  | Backend, 데이터 분석, 디지털 바이오마커 계산     |
-| 정아영  | AI, Computer Vision, 시선/얼굴 행동 분석  |
-| 서재석  | Frontend, 검사 UI, LLM 리포트, 결과 대시보드 |
 
 ---
 
