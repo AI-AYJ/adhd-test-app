@@ -22,7 +22,7 @@ function loadTs(relativePath, mocks = {}, env = {}) {
       if (name.startsWith('@/')) return loadTs(`${name.slice(2)}.ts`, mocks, env);
       throw new Error(`Unexpected dependency: ${name}`);
     },
-    process: { env }, crypto: require('node:crypto').webcrypto,
+    process: { env }, crypto: require('node:crypto').webcrypto, URL,
     console: { error() {}, warn() {} },
   }, { filename: relativePath });
   return module.exports;
@@ -68,6 +68,28 @@ async function generate(options) {
   }));
   return { response, body: await response.json(), calls };
 }
+
+test('Supabase module loads without configuration and validates only on DB use', () => {
+  let initialized = 0;
+  const database = loadTs('lib/supabase.ts', {
+    '@supabase/supabase-js': () => ({ createClient() { initialized++; return {}; } }),
+  });
+  assert.equal(database.supabaseUrl, null);
+  assert.equal(initialized, 0);
+  assert.throws(() => database.supabase.from('user_results'), /NEXT_PUBLIC_SUPABASE_URL/);
+});
+
+test('lazy Supabase client is reused and methods retain their receiver', () => {
+  let initialized = 0;
+  const client = { from() { return this; }, rpc() { return this; } };
+  const database = loadTs('lib/supabase.ts', {
+    '@supabase/supabase-js': () => ({ createClient() { initialized++; return client; } }),
+  }, { NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'test-key' });
+  assert.equal(initialized, 0);
+  assert.equal(database.supabase.from('user_results'), client);
+  assert.equal(database.supabase.rpc('test'), client);
+  assert.equal(initialized, 1);
+});
 
 test('DB is disabled by default: return report and metrics without Supabase or embeddings', async () => {
   const { response, body, calls } = await generate();
