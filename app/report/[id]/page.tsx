@@ -502,6 +502,21 @@ export default function ReportDetailPage() {
       setError(null);
 
       try {
+        try {
+          const temporaryReport = window.sessionStorage.getItem(`fast-report:${id}`);
+          if (temporaryReport) {
+            const cached = JSON.parse(temporaryReport) as ReportData;
+            if (cached.id === id && typeof cached.report === "string" && cached.report.trim()) {
+              setReport(cached);
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn("Temporary report could not be read:", err);
+        }
+        if (id.startsWith("local-")) {
+          throw new Error("이 리포트는 현재 탭에서만 임시로 확인할 수 있습니다. 탭을 닫았거나 임시 데이터가 삭제된 경우 검사를 다시 진행해 주세요.");
+        }
         const res = await fetch(`/api/analyze?id=${encodeURIComponent(id)}`, {
           cache: "no-store",
         });
@@ -637,6 +652,11 @@ export default function ReportDetailPage() {
               <p className="mt-3 text-sm font-semibold text-slate-500">
                 검사일: {new Date(report.created_at).toLocaleString("ko-KR")}
               </p>
+              {id.startsWith("local-") ? (
+                <p className="mt-3 text-sm leading-6 text-slate-500">
+                  현재 탭에서만 확인할 수 있는 임시 리포트입니다. 보관하려면 아래 리포트 인쇄 버튼에서 PDF로 저장해 주세요.
+                </p>
+              ) : null}
             </div>
 
             <div className="fast-report-score-card min-w-[220px] rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5">

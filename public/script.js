@@ -5543,10 +5543,39 @@ function drawBlendShapes(el, blendShapes) {
                 if (!reportId) {
                     throw new Error('생성된 리포트 ID를 받지 못했습니다.');
                 }
-                window.location.href = `/report/${reportId}`;
+                // Open the generated response directly, without reading it back
+                // from Supabase. Keep it only for the lifetime of this tab.
+                try {
+                    sessionStorage.setItem(`fast-report:${reportId}`, JSON.stringify(data.data));
+                } catch (storageError) {
+                    console.warn('Temporary report storage unavailable:', storageError);
+                    // Storage can be disabled or full. Still show the report on
+                    // this page instead of discarding a successful generation.
+                    let preview = document.getElementById('generated-report-preview');
+                    if (!preview) {
+                        preview = document.createElement('section');
+                        preview.id = 'generated-report-preview';
+                        preview.className = 'mt-6 rounded-3xl bg-white p-8 text-slate-900 shadow-lg';
+                        (btn?.parentElement || document.body).appendChild(preview);
+                    }
+                    const title = document.createElement('h2');
+                    title.textContent = '주의 특성 종합 리포트';
+                    const content = document.createElement('div');
+                    const parsed = new DOMParser().parseFromString(data.data.report, 'text/html');
+                    content.textContent = parsed.body.textContent;
+                    content.style.whiteSpace = 'pre-wrap';
+                    preview.replaceChildren(title, content);
+                    preview.scrollIntoView({ behavior: 'smooth' });
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = '리포트 다시 생성';
+                    }
+                    return;
+                }
+                window.location.href = `/report/${encodeURIComponent(reportId)}`;
             } catch (err) {
                 console.error('Report generation error:', err);
-                alert("리포트 저장 중 오류가 발생했습니다: " + String(err));
+                alert("리포트 생성 중 오류가 발생했습니다: " + String(err));
                 if (btn) {
                     btn.disabled = false;
                 btn.textContent = '리포트 생성';

@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 function getSupabaseProjectUrl() {
   const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -25,6 +25,23 @@ function getSupabaseServiceRoleKey() {
   return serviceRoleKey;
 }
 
-export const supabaseUrl = getSupabaseProjectUrl();
+export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  ? getSupabaseProjectUrl()
+  : null;
 
-export const supabase = createClient(supabaseUrl, getSupabaseServiceRoleKey());
+let client: SupabaseClient | undefined;
+
+function getSupabaseClient() {
+  client ??= createClient(getSupabaseProjectUrl(), getSupabaseServiceRoleKey());
+  return client;
+}
+
+// Legacy routes import this module during builds even when DB features are not
+// used. Resolve the client only when a route actually accesses a DB method.
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, property) {
+    const resolved = getSupabaseClient();
+    const value = Reflect.get(resolved, property, resolved);
+    return typeof value === "function" ? value.bind(resolved) : value;
+  },
+});

@@ -324,7 +324,7 @@ export default function Home() {
   const [featuredReviews, setFeaturedReviews] = useState<PublicReview[]>([]);
 
   useEffect(() => {
-    const mainScriptVersion = "20260609-01";
+    const mainScriptVersion = "20261021-01";
 
     const loadMainScript = () => {
       const existingMain = document.getElementById("fast-main-script") as HTMLScriptElement | null;
