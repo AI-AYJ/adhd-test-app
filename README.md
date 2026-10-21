@@ -127,6 +127,19 @@ npm install
 
 ### 3. Run Development Server
 
+리포트 생성에는 Vercel 또는 `.env.local`의 `GEMINI_API_KEY`가 필요합니다.
+기본 설정에서는 Supabase 연결, 임베딩 검색, DB 저장 없이 리포트를 생성하고 표시합니다.
+생성 결과는 현재 브라우저 탭의 `sessionStorage`에 임시 보관하며, 새로고침 후에도 같은 탭에서 확인할 수 있습니다.
+탭을 닫으면 임시 데이터가 사라지므로 보관하려면 리포트 화면의 **리포트 인쇄 → PDF로 저장**을 사용하세요.
+임시 리포트 주소는 다른 브라우저나 기기에서 공유하여 열 수 없으며, DB 기반 리포트 목록에는 추가되지 않습니다.
+
+Supabase를 복구한 뒤 DB 저장과 참고 문서 검색을 다시 사용하려면
+`REPORT_DATABASE_ENABLED=true`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 설정하세요.
+이 경우에도 DB 저장이나 참고 검색에 실패하면 생성된 리포트 자체는 표시됩니다.
+
+GitHub 변경 사항을 반영한 후 연결된 Vercel 프로젝트에서 새로 배포하면 적용됩니다.
+기존 Gemini 환경 변수는 유지하고, DB를 사용하지 않는 동안 `REPORT_DATABASE_ENABLED`는 설정하지 않거나 `false`로 두세요.
+
 ```bash
 npm run dev
 ```
