@@ -8,7 +8,7 @@ import {
   normalizeReportMetrics,
   type NormalizedReportMetrics,
 } from "@/lib/screeningProfile";
-import { supabase, supabaseUrl } from "@/lib/supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type GeminiResponse = {
   candidates?: Array<{
@@ -75,7 +75,7 @@ function formatRetrievedContext(matches: RagMatch[]) {
     .join("\n\n");
 }
 
-async function retrieveRagContext(metrics: NormalizedReportMetrics) {
+async function retrieveRagContext(metrics: NormalizedReportMetrics, supabase: SupabaseClient) {
   const queryEmbedding = await requestGEMINIEmbedding(buildRagQuery(metrics));
   const { data, error } = await supabase.rpc("match_rag_documents", {
     query_embedding: queryEmbedding,
@@ -152,7 +152,7 @@ function getSimilarReportMatchConfig() {
   };
 }
 
-async function retrieveSimilarReportContext(metrics: NormalizedReportMetrics) {
+async function retrieveSimilarReportContext(metrics: NormalizedReportMetrics, supabase: SupabaseClient) {
   const metricEmbedding = await requestGEMINIEmbedding(buildMetricEmbeddingInput(metrics));
   const { matchCount, matchThreshold } = getSimilarReportMatchConfig();
 
@@ -237,11 +237,17 @@ function ensureHtmlParagraphs(text: string) {
     .join("");
 }
 
-async function generateReportWithLLM(metrics: NormalizedReportMetrics) {
-  const [retrievedContext, similarReportResult] = await Promise.all([
-    retrieveRagContext(metrics),
-    retrieveSimilarReportContext(metrics),
+async function generateReportWithLLM(metrics: NormalizedReportMetrics, supabase: SupabaseClient | null) {
+  // Reference searches are optional; neither DB nor embedding failures should
+  // prevent generating a report from the user's measured results.
+  const [ragResult, similarResult] = await Promise.allSettled([
+    supabase ? retrieveRagContext(metrics, supabase) : Promise.resolve(""),
+    supabase ? retrieveSimilarReportContext(metrics, supabase) : Promise.resolve({ context: "", embedding: null }),
   ]);
+  const retrievedContext = ragResult.status === "fulfilled" ? ragResult.value : "";
+  const similarReportResult = similarResult.status === "fulfilled"
+    ? similarResult.value
+    : { context: "", embedding: null };
   const prompt = buildReportPrompt(metrics, retrievedContext, similarReportResult.context);
   const data = await requestGEMINILLM({
     prompt,
@@ -268,37 +274,60 @@ export async function POST(req: Request) {
     const metrics = normalizeReportMetrics(body);
     const riskScores = buildRiskScoreSnapshot(metrics);
 
-    stage = "generate-report";
-    const generated = await generateReportWithLLM(metrics);
-
-    stage = "save-report";
-    const { data, error } = await supabase
-      .from("user_results")
-      .insert({
-        created_at: getKoreanTimestamp(),
-        ...metrics,
-        report: generated.report,
-        metric_snapshot: metrics,
-        risk_scores: riskScores,
-        risk_score: riskScores.total,
-        survey_risk_score: riskScores.survey,
-        behavior_risk_score: riskScores.behavior,
-        profile_type: "user",
-        embedding: generated.metricEmbedding,
-        embedding_model: process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001",
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Supabase insert error in /api/generate-report:", error);
-      return NextResponse.json(
-        { success: false, stage, error: error.message, details: error, supabaseUrl },
-        { status: 500 },
-      );
+    // DB features are opt-in while Supabase is unavailable. Import lazily so
+    // missing Supabase environment variables do not break report generation.
+    let supabase: SupabaseClient | null = null;
+    if (process.env.REPORT_DATABASE_ENABLED === "true") {
+      try {
+        supabase = (await import("@/lib/supabase")).supabase;
+      } catch (err) {
+        console.warn("Report database is unavailable; continuing without storage:", err);
+      }
     }
 
-    return NextResponse.json({ success: true, data, id: data?.id });
+    stage = "generate-report";
+    const generated = await generateReportWithLLM(metrics, supabase);
+    const reportData = {
+      id: `local-${crypto.randomUUID()}`,
+      created_at: new Date().toISOString(),
+      ...metrics,
+      report: generated.report,
+      risk_scores: riskScores,
+      risk_score: riskScores.total,
+      survey_risk_score: riskScores.survey,
+      behavior_risk_score: riskScores.behavior,
+    };
+
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from("user_results")
+          .insert({
+            created_at: getKoreanTimestamp(),
+            ...metrics,
+            report: generated.report,
+            metric_snapshot: metrics,
+            risk_scores: riskScores,
+            risk_score: riskScores.total,
+            survey_risk_score: riskScores.survey,
+            behavior_risk_score: riskScores.behavior,
+            profile_type: "user",
+            embedding: generated.metricEmbedding,
+            embedding_model: process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001",
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (data?.id) {
+          return NextResponse.json({ success: true, saved: true, data, id: data.id });
+        }
+      } catch (err) {
+        console.warn("Report generated but DB save failed; returning generated report:", err);
+      }
+    }
+
+    return NextResponse.json({ success: true, saved: false, data: reportData, id: reportData.id });
   } catch (err) {
     console.error(`Error in /api/generate-report at ${stage}:`, err);
     return NextResponse.json(
